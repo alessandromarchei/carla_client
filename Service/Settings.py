@@ -274,7 +274,7 @@ class Settings_Set(object):
 
             # Write to Xml file
             with open(self.path, 'w') as f:
-                f.write(jsondata);
+                f.write(jsondata)
 
         except Exception as e:
 

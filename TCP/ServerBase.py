@@ -47,9 +47,6 @@ class ServerBase:
         self.worker = threading.Thread(target=self.run, daemon=True)
         self.worker.start()
 
-    # ------------------------------------------
-    # stop() — EXACTLY like C++ version
-    # ------------------------------------------
     def stop(self):
         print(f"[ServerBase] Stopping base server on port {self.port}...")
         self.running = False

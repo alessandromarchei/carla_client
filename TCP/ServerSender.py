@@ -2,6 +2,7 @@ from .ServerBase import ServerBase
 import cv2
 import os
 import time
+import numpy as np
 
 class ServerSender(ServerBase):
     def __init__(self, port, folder, out_queue, fps=10.0):
@@ -9,6 +10,38 @@ class ServerSender(ServerBase):
         self.folder = folder
         self.out_queue = out_queue
         self.fps = fps
+
+    def send_image(self, img):
+        """
+        Send a numpy uint8 image (H,W,3) to the client.
+        Exactly equivalent to C++ send(client_fd_, resized.data, img_size, 0)
+        """
+
+        if not self.running:
+            print("[ServerSender] ERROR: Server not running, cannot send.")
+            return False
+
+        if self.client_socket is None:
+            print("[ServerSender] ERROR: No client connected.")
+            return False
+
+        # Ensure contiguous raw buffer
+        if not img.flags['C_CONTIGUOUS']:
+            img = np.ascontiguousarray(img)
+
+        raw = img.tobytes()
+        size = len(raw)
+
+        try:
+            self.client_socket.sendall(raw)
+            print(f"[ServerSender] Sent image ({size} bytes)")
+            return True
+        except Exception as e:
+            print(f"[ServerSender] send_image() failed: {e}")
+            self.stop()
+            return False
+
+
 
     def run(self):
         if not self.startServer():

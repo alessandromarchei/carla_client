@@ -27,7 +27,7 @@ class ServerReceiver(ServerBase):
         super().stop()
 
     # ------------------------------------------
-    # run() — EXACT C++ equivalent
+    # run()
     # ------------------------------------------
     def run(self):
         if not self.startServer():

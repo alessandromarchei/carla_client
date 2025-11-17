@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import time
 
@@ -9,6 +8,8 @@ from TCP.Buffer import BlockingQueue
 
 DEFAULT_TX_PORT = 8080
 DEFAULT_RX_PORT = 8081
+
+DEFAULT_TX_RATE = 10.0    #send images at 10 Hz
 
 
 
@@ -38,7 +39,7 @@ def parse_args():
     parser.add_argument(
         "--fps",
         type=float,
-        default=10.0,
+        default=DEFAULT_TX_RATE,
         help="Transmission frame rate (Hz)"
     )
 
@@ -76,7 +77,7 @@ def main():
     print(f"Save: {save}")
     print(f"==========================")
 
-    # Shared thread-safe buffer (Python equivalent of your C++ BlockingQueue)
+    # Shared thread-safe buffer
     queue = BlockingQueue()
 
     # Create Sender + Receiver

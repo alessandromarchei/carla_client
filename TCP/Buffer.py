@@ -1,5 +1,5 @@
 # ----------------------------------------------
-# Thread-safe blocking queue (Python equivalent)
+# Thread-safe blocking queue 
 # ----------------------------------------------
 import queue
 
