@@ -1,0 +1,65 @@
+{
+    "Uuid": "0748f7c3-96de-4a9c-8404-e418279204f1",
+    "Name": "MINI CAR",
+    "Manufacturer": "cooper",
+    "Model": "mini",
+    "Class": "",
+    "Generation": "ActorAttribute(id=generation,type=int,value=3(const))",
+    "BlueprintID": "vehicle.mini.cooper",
+    "BaseType": "car",
+    "SpecialType": "",
+    "HasLights": true,
+    "HasOpeningDoors": true,
+    "InstalledVideoCams": [
+        {
+            "Uuid": "c7f59e31-3b6e-40fa-accf-beee546c5e18",
+            "name": "SRB-14-77",
+            "position": {
+                "positionX": 1.6,
+                "positionY": 0.0,
+                "positionZ": 1.7,
+                "rotation": 0
+            },
+            "frameSizeX": 640,
+            "frameSizeY": 320,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 0.0,
+            "rotationRoll": 0,
+            "postProcessing": "Depth",
+            "frameRate": 0.5,
+            "isFront": 1
+        },
+        {
+            "Uuid": "cac97be8-4021-48bf-b69c-b67b32b2a96e",
+            "name": "SRB-14-77-1",
+            "position": {
+                "positionX": -2.0,
+                "positionY": 0.0,
+                "positionZ": 1.2,
+                "rotation": 0
+            },
+            "frameSizeX": 640,
+            "frameSizeY": 480,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 180.0,
+            "rotationRoll": 0,
+            "postProcessing": "Depth",
+            "frameRate": 0.5,
+            "isFront": 0
+        }
+    ],
+    "MotionParameters": {
+        "throttling": 0,
+        "breaking": 0
+    },
+    "currentPosition": {
+        "positionX": 0,
+        "positionY": 0,
+        "positionZ": 0,
+        "rotation": 0
+    },
+    "status": 1,
+    "isEgo": false
+}

@@ -1,0 +1,44 @@
+{
+    "Uuid": "fdef417c-223e-41d9-bfd3-cfbe5679c7a4",
+    "Name": "TAXI CAR",
+    "Manufacturer": "taxi",
+    "Model": "ford",
+    "Class": "",
+    "Generation": "ActorAttribute(id=generation,type=int,value=3(const))",
+    "BlueprintID": "vehicle.taxi.ford",
+    "BaseType": "car",
+    "SpecialType": "",
+    "HasLights": true,
+    "HasOpeningDoors": true,
+    "InstalledVideoCams": [
+        {
+            "Uuid": "47e1e263-20a3-4871-9a1a-a72e0919aa4a",
+            "name": "NSUM-14-14",
+            "position": {
+                "positionX": 1.6,
+                "positionY": 0.0,
+                "positionZ": 1.7,
+                "rotation": 0
+            },
+            "frameSizeX": 1024,
+            "frameSizeY": 768,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 0,
+            "rotationRoll": 0,
+            "postProcessing": "Depth",
+            "frameRate": 0.5
+        }
+    ],
+    "MotionParameters": {
+        "throttling": 0,
+        "breaking": 0
+    },
+    "currentPosition": {
+        "positionX": 0,
+        "positionY": 0,
+        "positionZ": 0,
+        "rotation": 0
+    },
+    "isEgo": false
+}

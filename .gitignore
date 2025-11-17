@@ -1,0 +1,12 @@
+TCP/
+workstation_server.py
+
+**.png
+**.jpg
+*.whl
+**.egg
+
+__pycache__/
+*.pyc
+
+*.bat

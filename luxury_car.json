@@ -1,0 +1,63 @@
+{
+    "Uuid": "3b28ce97-5321-4f17-a389-5fd58327c0c0",
+    "Name": "LUXURY CAR",
+    "Manufacturer": "lincoln",
+    "Model": "mkz",
+    "Class": "",
+    "Generation": "ActorAttribute(id=generation,type=int,value=3(const))",
+    "BlueprintID": "vehicle.lincoln.mkz",
+    "BaseType": "car",
+    "SpecialType": "",
+    "HasLights": true,
+    "HasOpeningDoors": true,
+    "InstalledVideoCams": [
+        {
+            "Uuid": "f47b0d9a-4b4b-40f7-ae07-6af9171d22c9",
+            "name": "UM-14-77-14",
+            "position": {
+                "positionX": 1.6,
+                "positionY": 0.0,
+                "positionZ": 1.7,
+                "rotation": 0
+            },
+            "frameSizeX": 640,
+            "frameSizeY": 480,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 0,
+            "rotationRoll": 0,
+            "postProcessing": "Depth",
+            "frameRate": 0.5
+        },
+        {
+            "Uuid": "fb711744-45bf-4f41-97a3-0180aff49324",
+            "name": "Generic sensor",
+            "position": {
+                "positionX": 1.6,
+                "positionY": 0.0,
+                "positionZ": 1.7,
+                "rotation": 0
+            },
+            "frameSizeX": 640,
+            "frameSizeY": 480,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 0,
+            "rotationRoll": 0,
+            "postProcessing": "RGB",
+            "frameRate": 0.5
+        }
+    ],
+    "MotionParameters": {
+        "throttling": 0,
+        "breaking": 0
+    },
+    "currentPosition": {
+        "positionX": 0,
+        "positionY": 0,
+        "positionZ": 0,
+        "rotation": 0
+    },
+    "status": 0,
+    "isEgo": false
+}

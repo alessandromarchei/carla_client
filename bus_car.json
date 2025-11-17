@@ -1,0 +1,46 @@
+{
+    "Uuid": "c3d13ac5-f648-4b8c-b225-2ea1e79df200",
+    "Name": "BUS CAR",
+    "Manufacturer": "fuso",
+    "Model": "mitsubishi",
+    "Class": "",
+    "Generation": "ActorAttribute(id=generation,type=int,value=3(const))",
+    "BlueprintID": "vehicle.fuso.mitsubishi",
+    "BaseType": "bus",
+    "SpecialType": "",
+    "HasLights": true,
+    "HasOpeningDoors": false,
+    "InstalledVideoCams": [
+        {
+            "Uuid": "5bce81ea-1521-4966-857c-bb83c9979331",
+            "name": "Generic sensor",
+            "position": {
+                "positionX": 1.6,
+                "positionY": 0.0,
+                "positionZ": 1.7,
+                "rotation": 0
+            },
+            "frameSizeX": 1024,
+            "frameSizeY": 768,
+            "fieldOfVision": 90.0,
+            "rotationPitch": 0,
+            "rotationYaw": 0.0,
+            "rotationRoll": 0,
+            "postProcessing": "RGB",
+            "frameRate": 0.5,
+            "isFront": 0
+        }
+    ],
+    "MotionParameters": {
+        "throttling": 0,
+        "breaking": 0
+    },
+    "currentPosition": {
+        "positionX": 0,
+        "positionY": 0,
+        "positionZ": 0,
+        "rotation": 0
+    },
+    "status": 0,
+    "isEgo": false
+}

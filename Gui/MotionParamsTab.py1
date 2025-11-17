@@ -1,0 +1,400 @@
+﻿
+#===============================================
+# ===          CARLA emulator client         ===
+# ===   ----------------------------------   ===
+# ===  Turn parameters tab panel definition  ===
+#===============================================
+
+from tkinter import *
+from tkinter import ttk
+from turtle import bgcolor
+
+from Gui.ExtraScaleControl import ExtraScaleControlItem
+
+# https://ttkbootstrap.readthedocs.io/en/version-0.5/widgets/scale.html
+# https://ttkbootstrap.readthedocs.io/en/version-0.5/gallery/media_player.html
+# спигелон
+
+class MotionParamsTabItem(Frame):
+
+    #--------------------------
+    # --- Public properties
+    # -------------------------
+
+    # --- Currently active vehicle object
+    activeVehicle = None
+
+    # --- Current steering value title
+    steeringTitle = None
+
+    # --- Current throttling value title
+    throttlingTitle = None
+    
+    # --- Current braking value title
+    brakingTitle = None
+
+    # --- Current steering value
+    steering = None
+
+    # --- Current throttling value
+    throttling = None
+    
+    # --- Current braking value
+    braking = None
+
+    # --- Is manual gear on / off
+    manualGearStatus = None
+
+    # --- Is hand brake on / off 
+    handBrakeStatus = None
+
+    # --- Is reverse moving on / off
+    reverseMovingStatus = None
+
+    # --- Manual gear spinner control
+    manualGearSpinner = None
+
+    # --- Steering scale control
+    scaleSteering = None;
+
+    # --- Throttling scale control
+    scaleThrottling = None;
+
+    # --- Braking scale control
+    scaleBraking = None;
+
+    # --- Currently selected slider control
+    selectedSlider = None;
+
+    # --- Vehicle location (X-axis)
+    locationX = None
+
+    # --- Vehicle location (Y-axis)
+    locationY = None
+
+    # --- Vehicle location (Z-axis)
+    locationZ = None
+
+    # --- Vehicle location (rotation)
+    rotation = None
+
+    # --- Current X position value label
+    titleCurrentLocationXValue = None
+    
+    # --- Current Y position value label
+    titleCurrentLocationYValue = None
+    
+    # --- Current Z position value label
+    titleCurrentLocationZValue = None
+
+    # --- Current rotation position value label
+    titleCurrentLocationRValue = None
+
+    # --- Carla server connector object reference
+    carlaServerConnector = None
+
+    #--------------------
+    #--- Constructor  ---
+    #--------------------
+
+    # --- parent: parent window object
+    # --- bgcolor: panel background color
+    # --- carlaServerConnector: Carla server connector object reference
+    def __init__(self, parent, bgcolor, carlaServerConnector):
+        
+        super().__init__(parent, bg=bgcolor, name="motionparamstab",
+                         highlightbackground="black", highlightthickness=1)
+
+        self.carlaServerConnector = carlaServerConnector
+
+        self.prepareLocationFrame(bgcolor)
+
+        #self.prepareMainParamsPanel(bgcolor)
+
+        self.prepareExtraParamsPanel("white")
+
+        self.bind("<<PanelStatusChanged>>", self.onPanelStatusChanged)
+
+    # --- Prepare vehicle location controls panel
+    # --- bgcolor: panel background color
+    def prepareLocationFrame(self, bgcolor):
+
+        self.locationTitle = StringVar()
+        self.locationX = DoubleVar()
+        self.locationY = DoubleVar()
+        self.locationZ = DoubleVar()
+        self.rotation = DoubleVar()
+
+        locationFrame = Frame(self, bg=bgcolor,
+                         highlightbackground="black", highlightthickness=1)
+        locationFrame.pack(anchor="w", fill="x", padx=5, pady=5)
+
+        titleLabel = Label(locationFrame, text="VEHICLE LOCATION", bg=bgcolor, 
+                           font='Arial 10 bold')
+
+        titleLabel.pack(padx=5, pady=3, anchor="w")
+
+        locationParamsFrame = Frame(locationFrame, bg=bgcolor)
+        locationParamsFrame.pack(anchor="w", fill="x", padx=5, pady=5)
+
+        locationParamsFrame.rowconfigure(0, weight=1)
+        locationParamsFrame.rowconfigure(1, weight=1)
+        locationParamsFrame.columnconfigure(0)
+        locationParamsFrame.columnconfigure(1, weight=1)
+        locationParamsFrame.columnconfigure(2)
+        locationParamsFrame.columnconfigure(3, weight=1)
+        locationParamsFrame.columnconfigure(4)
+        locationParamsFrame.columnconfigure(5, weight=1)
+        locationParamsFrame.columnconfigure(6)
+        locationParamsFrame.columnconfigure(7, weight=1)
+
+        # ---
+        titleCurrentLocationX = Label(locationParamsFrame, text="X-Axis:", bg=bgcolor)
+        titleCurrentLocationX.grid(row=0, column=0)
+        
+        titleCurrentLocationY = Label(locationParamsFrame, text="Y-Axis:", bg=bgcolor)
+        titleCurrentLocationY.grid(row=0, column=2)
+
+        titleCurrentLocationZ = Label(locationParamsFrame, text="Z-Axis:", bg=bgcolor)
+        titleCurrentLocationZ.grid(row=0, column=4)
+
+        titleCurrentRotation = Label(locationParamsFrame, text="Rotation:", bg=bgcolor)
+        titleCurrentRotation.grid(row=0, column=6)
+
+        self.titleCurrentLocationXValue = Label(locationParamsFrame, text="0.0", 
+                                                bg=bgcolor, fg="blue")
+        self.titleCurrentLocationXValue.grid(row=0, column=1)
+        self.titleCurrentLocationYValue = Label(locationParamsFrame, text="0.0", 
+                                                bg=bgcolor, fg="blue")
+        self.titleCurrentLocationYValue.grid(row=0, column=3)
+        self.titleCurrentLocationZValue = Label(locationParamsFrame, text="0.0", 
+                                                bg=bgcolor, fg="blue")
+        self.titleCurrentLocationZValue.grid(row=0, column=5)
+        self.titleCurrentLocationRValue = Label(locationParamsFrame, text="0.0", 
+                                                bg=bgcolor, fg="blue")
+        self.titleCurrentLocationRValue.grid(row=0, column=7)
+
+        # ---
+
+        titleLocationX = Label(locationParamsFrame, text="X-Axis:", bg=bgcolor)
+        titleLocationX.grid(row=1, column=0)
+        entryLocationX = Entry(locationParamsFrame, textvariable=self.locationX, bg="honeydew2")
+        entryLocationX.grid(row=1, column=1, padx=5)
+        
+        titleLocationY = Label(locationParamsFrame, text="Y-Axis:", bg=bgcolor)
+        titleLocationY.grid(row=1, column=2)
+        entryLocationY = Entry(locationParamsFrame, textvariable=self.locationY, bg="honeydew2")
+        entryLocationY.grid(row=1, column=3, padx=5)
+
+        titleLocationZ = Label(locationParamsFrame, text="Z-Axis:", bg=bgcolor)
+        titleLocationZ.grid(row=1, column=4)
+        entryLocationZ = Entry(locationParamsFrame, textvariable=self.locationZ, bg="honeydew2")
+        entryLocationZ.grid(row=1, column=5, padx=5)
+
+        titleRotation = Label(locationParamsFrame, text="Rotation:", bg=bgcolor)
+        titleRotation.grid(row=1, column=6)
+        entryRotation = Entry(locationParamsFrame, textvariable=self.rotation, bg="honeydew2")
+        entryRotation.grid(row=1, column=7, padx=5)
+
+        setButton = Button(locationFrame, text=' Apply ', 
+                           bg="skyblue1", fg="black")
+        setButton.pack(anchor="w", padx=5, pady=5)
+
+    # --- Prepare main motion parameters controls panel
+    # --- bgcolor: panel background color
+    def prepareMainParamsPanel(self, bgcolor):            
+
+        self.steeringTitle = StringVar()
+        self.throttlingTitle = StringVar()
+        self.brakingTitle = StringVar()
+
+        self.onSteeringChange(0);
+        self.onThrottlingChange(0);
+        self.onBrakingChange(0);
+
+        self.steering = DoubleVar()
+        self.throttling = DoubleVar()
+        self.braking = DoubleVar()
+        
+        style = ttk.Style()
+        style.configure("inactive.Horizontal.TScale", background="black",
+                        troughcolor='gray77', troughrelief="sunken")
+
+        self.styleSelected = ttk.Style()
+        self.styleSelected.configure("active.Horizontal.TScale", background="black",
+                        troughcolor='limegreen', troughrelief="sunken")
+
+        self.scaleSteering = ExtraScaleControlItem(self, "steering", "st", "STEERING",
+                                "trough.png", "slider.png", "white", "lemonchiffon", -100, 100, 0, 100,
+                                "← / → keys to move", True, self.onSteeringChange)
+        self.scaleSteering.pack(anchor="w", fill="x", padx=5, pady=5)
+
+        self.scaleThrottling = ExtraScaleControlItem(self, "throttling", "tr", "THROTTLING",
+                                "trough.png", "slider.png", "white", "lemonchiffon", 0, 100, 0, 100,
+                                "↑ / ↓ keys to move", True, self.onThrottlingChange)
+        self.scaleThrottling.pack(anchor="w", fill="x", padx=5, pady=5)
+
+        self.scaleBraking = ExtraScaleControlItem(self, "braking", "br", "BRAKING",
+                                "trough.png", "slider.png", "white", "lemonchiffon", 0, 100, 0, 100,
+                                "Q / W keys to move", True, self.onBrakingChange)
+        self.scaleBraking.pack(anchor="w", fill="x", padx=5, pady=5)
+
+    # --- Create extra parameters frame
+    # --- title: frame' title
+    # --- bgcolor: background color
+    # --- var: slider' variable
+    def prepareExtraParamsPanel(self, bgcolor):
+
+        self.manualGearStatus = IntVar() 
+        self.handBrakeStatus = IntVar() 
+        self.reverseMovingStatus = IntVar() 
+
+        extraParamsFrame = Frame(self, bg=bgcolor, name="extraparamsframe",
+                         highlightbackground="black", highlightthickness=1)
+
+        extraParamsFrame.pack(anchor="w", fill="x", padx=5, pady=5)
+
+        titleLabel = Label(extraParamsFrame, text="EXTRA PARAMETERS", bg=bgcolor, font='Arial 10 bold')
+        titleLabel.pack(anchor="w", padx=5, pady=3)
+
+        manualGearCheckbox = Checkbutton(extraParamsFrame, 
+                    name="mgcb", text = "Use manual gear", 
+                    bg=bgcolor, variable = self.manualGearStatus, onvalue = 1, offvalue = 0,
+                    command=self.onManualGearStatusChanged) 
+        manualGearCheckbox.pack(anchor="w")
+
+        manualGearFrame = Frame(extraParamsFrame, bg="white")
+        manualGearFrame.pack(anchor="w")
+
+        manualGearFrame.rowconfigure(0, weight=1)
+        manualGearFrame.columnconfigure(0)
+        manualGearFrame.columnconfigure(1)
+
+        gearLabel = Label(manualGearFrame, text="Currently selected gear:", bg=bgcolor)
+        gearLabel.grid(row=0, column=0, padx=5, pady=3, sticky="w")
+        self.manualGearSpinner = Spinbox(manualGearFrame, name="mgsp",
+                                         from_=1, to=5, bg="honeydew2")
+        self.manualGearSpinner.grid(row=0, column=1, padx=5, pady=3, sticky="w")
+
+        handBrakeCheckbox = Checkbutton(extraParamsFrame, text = "Hand brake", 
+                    bg=bgcolor, variable = self.handBrakeStatus, onvalue = 1, offvalue = 0) 
+        handBrakeCheckbox.pack(anchor="w")
+        
+        reverseMovingCheckbox = Checkbutton(extraParamsFrame, text = "Reverse moving", 
+                    bg=bgcolor, variable = self.reverseMovingStatus, onvalue = 1, offvalue = 0) 
+        reverseMovingCheckbox.pack(anchor="w")
+
+        self.onManualGearStatusChanged()
+
+    #---------------------------------
+    # --- Controls events handlers ---
+    #---------------------------------
+
+    # --- Steering value is changed event handler
+    # --- p: new steering value
+    def onSteeringChange(self, p):
+        
+        turn = "NEUTRAL"
+
+        if float(p) > 0:
+            turn = "TURN RIGHT"
+        
+        if float(p) < 0:
+            turn = "TURN LEFT"
+
+        if self.scaleSteering is not None:
+            self.scaleSteering.setTitle("STEERING: {0} (range -1..1)".format(turn))
+
+        print("------- TURN FOR: {0:.2f}".format(float(p)))    
+
+        if self.carlaServerConnector is not None:
+            self.carlaServerConnector.DoAction(1, float(p))
+
+    # --- Throttling value is changed event handler
+    # --- p: new throttling value
+    def onThrottlingChange(self, p):
+        
+        self.throttlingTitle.set("{0:.3f} (range 0..1)".format(float(p) / 100))
+
+        if self.carlaServerConnector is not None:
+            self.carlaServerConnector.DoAction(2, float(p))
+
+    # --- Braking value is changed event handler
+    # --- p: new braking value
+    def onBrakingChange(self, p):
+        
+        self.brakingTitle.set("{0:.3f} (range 0..1)".format(float(p) / 100))
+        
+        if self.carlaServerConnector is not None:
+            self.carlaServerConnector.DoAction(3, float(p))
+
+    # --- Manual gear status check box is changed event handler
+    def onManualGearStatusChanged(self):
+
+        checked = self.manualGearStatus.get()
+        if(checked == 1):
+            self.manualGearSpinner.config(state="normal")
+        else:
+            self.manualGearSpinner.config(state="disabled")
+
+    # --- Steering slider panel is selected event handler
+    # --- event: event parameters set
+    def onSelectSteering(self, event):
+        self.scaleSteering.focus_set()
+        self.scaleSteering.config(style="active.Horizontal.TScale")
+        self.onUselectSlider(self.scaleSteering)
+
+    # --- Throttling slider panel is selected event handler
+    # --- event: event parameters set
+    def onSelectThrottling(self, event):
+        self.scaleThrottling.focus_set()
+        self.scaleThrottling.config(style="active.Horizontal.TScale")
+        self.onUselectSlider(self.scaleThrottling)
+
+    # --- Braking slider panel is selected event handler
+    # --- event: event parameters set
+    def onSelectBraking(self, event):
+        self.scaleBraking.focus_set()
+        self.scaleBraking.config(style="active.Horizontal.TScale")
+        self.onUselectSlider(self.scaleBraking)
+
+    # --- Unselect currently selected slider
+    # --- slider: currently selected slider object
+    def onUselectSlider(self, slider):
+        if self.selectedSlider is not None:
+            if self.selectedSlider != slider:
+                self.selectedSlider.config(style="inactive.Horizontal.TScale")
+        self.selectedSlider = slider
+
+    # --- Panel controls status are changed event handler
+    # --- event: event parameters set
+    def onPanelStatusChanged(self, event):
+        self.onManualGearStatusChanged()
+
+    # --- Set currently active vehicle
+    # --- vehicle: current vehicle to be set
+    def setActiveVehicle(self, vehicle):
+
+        try:
+            self.activeVehicle = vehicle
+
+            if self.activeVehicle is not None:
+                self.titleCurrentLocationXValue.config(text="{0:.2f}".format(self.activeVehicle.currentPosition.positionX))
+                self.titleCurrentLocationYValue.config(text="{0:.2f}".format(self.activeVehicle.currentPosition.positionY))
+                self.titleCurrentLocationZValue.config(text="{0:.2f}".format(self.activeVehicle.currentPosition.positionZ))
+                self.titleCurrentLocationRValue.config(text="{0:.2f}".format(self.activeVehicle.currentPosition.rotation))
+        except Exception as e:
+            print(e)
+
+    #--- Key released event handler
+    #--- event: event parameters
+    def doKeyboardAction(self, event):
+
+        match event:
+            case 1 | 2: 
+                self.scaleSteering.doKeyboardAction(event)
+            case 3 | 4:
+                self.scaleThrottling.doKeyboardAction(event - 2)
+            case 5 | 6:
+                self.scaleBraking.doKeyboardAction(event - 4)
+
