@@ -1,4 +1,5 @@
 from .ServerBase import ServerBase
+from .utils.visualization import add_mask_segmentation
 import cv2
 import numpy as np
 import time
@@ -59,7 +60,7 @@ class ServerReceiver(ServerBase):
             mask = np.frombuffer(data, dtype=np.uint8).reshape((320, 640))
 
             if self.visualize:
-                overlay = self.visualize_segmentation(mask, sf["img"], 0.5)
+                overlay = add_mask_segmentation(sf["img"], mask, 0.5)
                 cv2.imshow("Input Image", sf["img"])
                 cv2.imshow("Segmentation Overlay", overlay)
                 key = cv2.waitKey(int(max(1, 1000 / self.fps)))
@@ -68,7 +69,7 @@ class ServerReceiver(ServerBase):
                     break
 
             if self.save:
-                overlay = self.visualize_segmentation(mask, sf["img"], 0.5)
+                overlay = add_mask_segmentation(sf["img"], mask, 0.5)
                 combined = np.vstack((sf["img"], overlay))
                 name = f"result_{self.frame_idx}.png"
                 cv2.imwrite(name, combined)
@@ -89,7 +90,3 @@ class ServerReceiver(ServerBase):
                 return None
             data.extend(packet)
         return data
-
-    def visualize_segmentation(self, mask, img, alpha):
-        mask_color = cv2.applyColorMap(mask, cv2.COLORMAP_JET)
-        return cv2.addWeighted(img, 1 - alpha, mask_color, alpha, 0)

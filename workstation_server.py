@@ -89,10 +89,6 @@ def main():
 
     print("[Main] Sender and Receiver threads started.")
 
-    # -----------------------------------------------------
-    # Wait until Sender is done transmitting all images
-    # (same logic as your C++)
-    # -----------------------------------------------------
     while sender.running:
         time.sleep(0.1)
 
