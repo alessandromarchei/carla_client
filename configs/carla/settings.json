@@ -1,5 +1,5 @@
 {
-    "path": "./settings.json",
+    "path": "configs/carla/settings.json",
     "carlaServerUrl": "127.0.0.1",
     "carlaServerMainPort": 2000,
     "carlaServerTrafficManagerPort": 2080,

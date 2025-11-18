@@ -1,8 +1,8 @@
 {
-    "path": "./settings.json",
+    "path": "configs/carla/settings_2.json",
     "carlaServerUrl": "127.0.0.1",
-    "carlaServerMainPort": 3000,
-    "carlaServerTrafficManagerPort": 3080,
+    "carlaServerMainPort": 2000,
+    "carlaServerTrafficManagerPort": 2080,
     "carlaServerConnectionTimeout": 45,
     "carlaServerGeneralMode": 1,
     "carlaServerRequiredFps": 50,
@@ -28,7 +28,7 @@
     "useHybridPhysicsMode": 1,
     "hybridModeRadius": 75,
     "vehicleControlUnitAddress": "127.0.0.1",
-    "vehicleControlUnitPort": 4333,
-    "predictionUnitAddress": "192.168.50.93",
-    "predictionUnitPort": 4333
+    "vehicleControlUnitPort": 3333,
+    "predictionUnitAddress": "127.0.0.1",
+    "predictionUnitPort": 4444
 }

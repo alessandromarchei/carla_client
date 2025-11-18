@@ -1,59 +1,32 @@
 import argparse
 import time
+import os
+import cv2
+import numpy as np
 
 from TCP.ServerSender import ServerSender
 from TCP.ServerReceiver import ServerReceiver
 from TCP.Buffer import BlockingQueue
 
-
-DEFAULT_TX_PORT = 8080
-DEFAULT_RX_PORT = 8081
-
-DEFAULT_TX_RATE = 10.0    #send images at 10 Hz
+from TCP.utils.visualization import add_mask_segmentation
 
 
-
+"""
+Normal mode : scan the input folder and send images at fixed rate
+Manual send mode : wait for user input to send the next image with the sendDataForPrediction() function
+"""
 def parse_args():
-    parser = argparse.ArgumentParser(description="Workstation TCP Server (Python)")
+    parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "-i", "--image-folder",
-        required=True,
-        type=str,
-        help="Folder containing input images"
-    )
+    parser.add_argument("-i", "--image-folder", type=str)
+    parser.add_argument("--manual-send", action="store_true")
 
-    parser.add_argument(
-        "--port-tx",
-        type=int,
-        default=DEFAULT_TX_PORT,
-        help="TX port (server → client)"
-    )
-    parser.add_argument(
-        "--port-rx",
-        type=int,
-        default=DEFAULT_RX_PORT,
-        help="RX port (client → server)"
-    )
+    parser.add_argument("--port-tx", type=int, default=8080)
+    parser.add_argument("--port-rx", type=int, default=8081)
+    parser.add_argument("--fps", type=float, default=10.0)
 
-    parser.add_argument(
-        "--fps",
-        type=float,
-        default=DEFAULT_TX_RATE,
-        help="Transmission frame rate (Hz)"
-    )
-
-    parser.add_argument(
-        "--viz",
-        action="store_true",
-        help="Visualize received masks"
-    )
-
-    parser.add_argument(
-        "--save",
-        action="store_true",
-        help="Save combined output images"
-    )
+    parser.add_argument("--viz", action="store_true")
+    parser.add_argument("--save", action="store_true")
 
     return parser.parse_args()
 
@@ -61,44 +34,65 @@ def parse_args():
 def main():
     args = parse_args()
 
-    tx_port = args.port_tx
-    rx_port = args.port_rx
-    fps = args.fps
-    visualize = args.viz
-    save = args.save
-    image_folder = args.image_folder
+    sender_queue = BlockingQueue()
+    sent_queue = BlockingQueue()
 
-    print(f"==========================")
-    print(f"Starting Python Server")
-    print(f"TX port: {tx_port}")
-    print(f"RX port: {rx_port}")
-    print(f"FPS: {fps}")
-    print(f"Viz: {visualize}")
-    print(f"Save: {save}")
-    print(f"==========================")
+    sender = ServerSender(
+        args.port_tx,
+        sender_queue,
+        sent_queue,
+        fps=args.fps,
+        input_folder=None if args.manual_send else args.image_folder
+    )
 
-    # Shared thread-safe buffer
-    queue = BlockingQueue()
+    receiver = ServerReceiver(args.port_rx, sent_queue)
 
-    # Create Sender + Receiver
-    sender = ServerSender(tx_port, image_folder, queue, fps)
-    receiver = ServerReceiver(rx_port, queue, visualize, save, fps)
-
-    # Start both threads
     sender.start()
     receiver.start()
 
-    print("[Main] Sender and Receiver threads started.")
+    # wait until both connections established
+    print("[Main] Waiting for client connections...")
+    while sender.client_sock is None or receiver.client_sock is None:
+        time.sleep(0.05)
 
-    while sender.running:
-        time.sleep(0.1)
+    print("[Main] Connected. Starting streaming loop.")
 
-    print("[Main] Sender thread ended, stopping...")
+    # MANUAL SEND MODE
+    if args.manual_send:
+        folder = os.path.expanduser(args.image_folder)
+        files = sorted(os.listdir(folder))
 
-    sender.stop()
-    receiver.stop()
+        frame_id = 0
 
-    print("[Main] Server finished cleanly.")
+        for fname in files:
+            img = cv2.imread(os.path.join(folder, fname))
+            if img is None:
+                continue
+
+            frame_id += 1
+            sender.sendDataForPrediction(img, frame_id)
+            time.sleep(1.0 / args.fps)
+
+    # MAIN VIS LOOP for each image in folder img.len()
+    for _ in range(len(files)):
+        result = receiver.receiveDataFromPrediction()
+        if result is None:
+            time.sleep(0.01)
+            continue
+
+        frame, mask = result
+        img = frame["img"]
+        f_id = frame["frame_id"]
+
+        if args.viz:
+            overlay = add_mask_segmentation(img, mask, alpha=0.5)
+            cv2.imshow("SceneSeg", overlay)
+            cv2.waitKey(1)
+
+        if args.save:
+            overlay = add_mask_segmentation(img, mask, alpha=0.5)
+            out = np.vstack([img, overlay])
+            cv2.imwrite(f"result_{f_id}.png", out)
 
 
 if __name__ == "__main__":

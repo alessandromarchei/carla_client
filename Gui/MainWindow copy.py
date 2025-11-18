@@ -200,54 +200,80 @@ class MainWindow(object):
     # --- settings: application settings collection
     def __init__(self, title, carlaConnector, usedVehicles, settings):
 
-        self.app_settings = settings
+        print("[gui] __init__() start")
 
-        # --- CARLA' connector service preparation
+        self.app_settings = settings
+        print("[gui] Settings object assigned")
+
+        # --- CARLA connector service preparation
+        print("[gui] Preparing CARLA connector service...")
         self.carlaConnectorService = carlaConnector
         self.carlaConnectorService.onConnectionAttemptCompleted = self.onConnectionAttemptCompleted
         self.carlaConnectorService.onControlUnitConnectionAttemptCompleted = self.onControlUnitConnectionAttemptCompleted
-        self.carlaConnectorService.onPredictionUnitConnectionAttemptCompleted = self.onPredictionUnitConnectionAttemptCompleted
+        self.carlaConnectorService.onPredictionUnitConnectionAttemptCompleted = self.onPredictionUnitConnectAttemptCompleted if hasattr(self, "onPredictionUnitConnectAttemptCompleted") else self.onPredictionUnitConnectionAttemptCompleted
         self.carlaConnectorService.onLoadWorldAttemptCompleted = self.onLoadWorldAttemptCompleted
         self.carlaConnectorService.onActorHasBeenSpawned = self.onActorHasBeenSpawned
         self.carlaConnectorService.onNewVideoFrameIsRecieved = self.onNewVideoFrameIsRecieved
         self.carlaConnectorService.onVehicleHasBeenStarted = self.onVehicleHasBeenStarted        
         self.carlaConnectorService.onMovingStep = self.onMovingStep
+        print("[gui] CARLA connector callbacks registered")
 
         self.usedVehicles = usedVehicles
+        print(f"[gui] Used vehicles count: {len(self.usedVehicles)}")
 
         if len(usedVehicles) > 0:
             self.selectedVehicle = usedVehicles[0]
+            print(f"[gui] Selected vehicle initialized: {self.selectedVehicle.Name}")
+        else:
+            print("[gui] WARNING: usedVehicles is empty, no selectedVehicle")
 
-        self.rootWnd = Tk();             # Initialize Tkinter framework
+        print("[gui] Initializing Tk root window...")
+        self.rootWnd = Tk()             # Initialize Tkinter framework
+        print("[gui] Tkinter framework initialized")
 
         self.rootWnd.protocol("WM_DELETE_WINDOW", self.close_window)
-
         self.rootWnd.title(title)        # Set window title
+        print(f"[gui] Window title set to: {title}")
 
- #       self.rootWnd.state('zoomed')     # Maximize window
+        # self.rootWnd.state('zoomed')     # Maximize window (currently disabled)
 
+        print("[gui] Configuring root grid (rows/columns)...")
         self.rootWnd.rowconfigure(0, weight=16)
 
         self.progressWindow = ProgressWnd(self.rootWnd)
+        print("[gui] Progress window created")
 
-        # weight=0 to supress expanding!
+        # weight=0 to suppress expanding!
         self.rootWnd.columnconfigure(0, weight=1, uniform="column")
         self.rootWnd.columnconfigure(1, weight=1, uniform="column")
-        
-        # Left frame definition (vehicles and installed sensors)
-        self.leftFrame = Frame(self.rootWnd, background='lightsteelblue')
+        print("[gui] Root columns configured")
 
+        # Left frame definition (vehicles and installed sensors)
+        print("[gui] Creating leftFrame...")
+        self.leftFrame = Frame(self.rootWnd, background='lightsteelblue')
         self.leftFrame.columnconfigure(0, weight=0)
 
-        connectionCommonFrame = Frame(self.leftFrame, name="$$$connectionframe$$$",
-                                      background='lightsteelblue')
+        connectionCommonFrame = Frame(
+            self.leftFrame,
+            name="$$$connectionframe$$$",
+            background='lightsteelblue'
+        )
         connectionCommonFrame.pack(anchor="w", fill="x")
+        print("[gui] Connection frame created")
 
         # Connection frame
-        urlTitle = Label(connectionCommonFrame, text="CARLA SERVER CONNECTION:", font=("Roboto", 11), 
-                         fg="white", bg="dodgerblue2")
+        urlTitle = Label(
+            connectionCommonFrame,
+            text="CARLA SERVER CONNECTION:",
+            font=("Roboto", 11),
+            fg="white",
+            bg="dodgerblue2"
+        )
         urlTitle.pack(anchor="nw", fill="x", padx=1)
-        
+        print("[gui] Connection header label added")
+
+        # ---- Bind settings to Tk variables
+        print("[gui] Initializing connection-related Tk variables from settings...")
         self.urlCarla = StringVar(value=self.app_settings.carlaServerUrl)
         self.portCarla = IntVar(value=self.app_settings.carlaServerMainPort)
         self.portTMCarla = IntVar(value=self.app_settings.carlaServerTrafficManagerPort)
@@ -263,7 +289,10 @@ class MainWindow(object):
         self.portVCU = IntVar(value=self.app_settings.vehicleControlUnitPort)
         self.urlPSU = StringVar(value=self.app_settings.predictionUnitAddress)
         self.portPSU = IntVar(value=self.app_settings.predictionUnitPort)
+        print("[gui] Tk variables initialized from settings")
 
+        # ---- URL / ports row
+        print("[gui] Building URL / port controls...")
         urlFrame = Frame(connectionCommonFrame, background='lightsteelblue')
         urlFrame.pack(pady=5)
         urlFrame.rowconfigure(0, weight=1)
@@ -279,49 +308,63 @@ class MainWindow(object):
 
         urlSubTitle = Label(urlFrame, text="URL:", background='lightsteelblue', font=("Roboto", 10))
         urlSubTitle.grid(row=0, column=0, padx=2)
-        urlEntry = customtkinter.CTkEntry(
-            urlFrame, textvariable=self.urlCarla, corner_radius=5)
+        urlEntry = customtkinter.CTkEntry(urlFrame, textvariable=self.urlCarla, corner_radius=5)
         urlEntry.grid(row=0, column=1, sticky="nwse")
 
         portTitle = Label(urlFrame, text="Port:", background='lightsteelblue', font=("Roboto", 10))
         portTitle.grid(row=0, column=2, padx=2)
-        portEntry = customtkinter.CTkEntry(
-            urlFrame, textvariable=self.portCarla, corner_radius=5)
+        portEntry = customtkinter.CTkEntry(urlFrame, textvariable=self.portCarla, corner_radius=5)
         portEntry.grid(row=0, column=3, sticky="nwse", padx=5)
 
         portTMTitle = Label(urlFrame, text="TM port:", background='lightsteelblue', font=("Roboto", 10))
         portTMTitle.grid(row=0, column=4, padx=2)
-        portTMEntry = customtkinter.CTkEntry(
-            urlFrame, textvariable=self.portTMCarla, corner_radius=5)
+        portTMEntry = customtkinter.CTkEntry(urlFrame, textvariable=self.portTMCarla, corner_radius=5)
         portTMEntry.grid(row=0, column=5, sticky="nwse", padx=5)
 
         timeoutTitle = Label(urlFrame, text="Timeout (sec):", background='lightsteelblue', font=("Roboto", 10))
         timeoutTitle.grid(row=0, column=6, padx=2)
-        timeoutEntry = customtkinter.CTkEntry(
-            urlFrame, textvariable=self.timeoutCarla, corner_radius=5)
+        timeoutEntry = customtkinter.CTkEntry(urlFrame, textvariable=self.timeoutCarla, corner_radius=5)
         timeoutEntry.grid(row=0, column=7, sticky="nwse", padx=5)
-        
+        print("[gui] URL / port controls created")
+
+        # ---- Mode / FPS section
+        print("[gui] Creating mode/FPS controls...")
         modeFrame = Frame(connectionCommonFrame, background='lightsteelblue')
         modeFrame.pack(padx=5)
         modeFrame.columnconfigure(0, weight=0)
         modeFrame.columnconfigure(1)
         modeFrame.columnconfigure(2, weight=10)
 
-        self.syncModeCheckbox = customtkinter.CTkCheckBox(modeFrame, 
-            text = "Synchronous mode", 
-            corner_radius=3, fg_color = ('green', 'white'),
-            variable = self.useSyncMode, onvalue = 1, offvalue = 0) 
+        self.syncModeCheckbox = customtkinter.CTkCheckBox(
+            modeFrame,
+            text="Synchronous mode",
+            corner_radius=3,
+            fg_color=('green', 'white'),
+            variable=self.useSyncMode,
+            onvalue=1,
+            offvalue=0
+        )
         self.syncModeCheckbox.grid(row=0, column=0)
-        print(self.syncModeCheckbox)
+        print(f"[gui] Sync mode checkbox created, initial value={self.useSyncMode.get()}")
 
-        timestampTitle = Label(modeFrame, text="Desired FPS (-1 means variable one):", background='lightsteelblue',
-                               font=("Roboto", 10))
+        timestampTitle = Label(
+            modeFrame,
+            text="Desired FPS (-1 means variable one):",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         timestampTitle.grid(row=0, column=1, padx=5)
-        timestampEntry = customtkinter.CTkEntry(modeFrame, textvariable=self.desiredFps, corner_radius=5, width=100)
+        timestampEntry = customtkinter.CTkEntry(
+            modeFrame,
+            textvariable=self.desiredFps,
+            corner_radius=5,
+            width=100
+        )
         timestampEntry.grid(row=0, column=2, sticky="nwse")
+        print("[gui] FPS controls created")
 
-        # --- Extra Carla server paremeters enter panel
-        
+        # --- Extra Carla server parameters
+        print("[gui] Creating extra server parameters panel...")
         extraServerParamsFrame = Frame(connectionCommonFrame, background='lightsteelblue')
         extraServerParamsFrame.rowconfigure(0)
         extraServerParamsFrame.rowconfigure(1, weight=10)
@@ -329,16 +372,36 @@ class MainWindow(object):
         extraServerParamsFrame.rowconfigure(3, weight=10)
         extraServerParamsFrame.pack(pady=5)
 
-        maxQueueSizeTitle = Label(extraServerParamsFrame, text="Max frames queue size:", background='lightsteelblue',
-                                  font=("Roboto", 10))
+        maxQueueSizeTitle = Label(
+            extraServerParamsFrame,
+            text="Max frames queue size:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         maxQueueSizeTitle.grid(row=0, column=0)
-        maxQueueSizeEntry = customtkinter.CTkEntry(extraServerParamsFrame, textvariable=self.maxFramesQueueSize, corner_radius=5, width=100)
+        maxQueueSizeEntry = customtkinter.CTkEntry(
+            extraServerParamsFrame,
+            textvariable=self.maxFramesQueueSize,
+            corner_radius=5,
+            width=100
+        )
         maxQueueSizeEntry.grid(row=0, column=1, sticky="nwse", padx=5)
 
-        getTimeoutTitle = Label(extraServerParamsFrame, text="Queue GET operation timeout (sec):", background='lightsteelblue', font=("Roboto", 10))
+        getTimeoutTitle = Label(
+            extraServerParamsFrame,
+            text="Queue GET operation timeout (sec):",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         getTimeoutTitle.grid(row=0, column=2)
-        getTimeoutEntry = customtkinter.CTkEntry(extraServerParamsFrame, textvariable=self.queueGetActionTimeout, corner_radius=5, width=100)
+        getTimeoutEntry = customtkinter.CTkEntry(
+            extraServerParamsFrame,
+            textvariable=self.queueGetActionTimeout,
+            corner_radius=5,
+            width=100
+        )
         getTimeoutEntry.grid(row=0, column=3, sticky="nwse", padx=5)
+        print("[gui] Extra server parameters created")
 
         extraServerParamsFrame2 = Frame(connectionCommonFrame, background='lightsteelblue')
         extraServerParamsFrame2.rowconfigure(0, weight=1)
@@ -350,33 +413,67 @@ class MainWindow(object):
         extraServerParamsFrame2.columnconfigure(5)
         extraServerParamsFrame2.pack()
 
-        self.syncModeCheckbox = customtkinter.CTkCheckBox(extraServerParamsFrame2, 
-                    text = "Generated traffic",
-                    variable = self.useTrafficManager, onvalue = 1, offvalue = 0, 
-                    corner_radius=3, fg_color = ('green', 'white'))
-
+        self.syncModeCheckbox = customtkinter.CTkCheckBox(
+            extraServerParamsFrame2,
+            text="Generated traffic",
+            variable=self.useTrafficManager,
+            onvalue=1,
+            offvalue=0,
+            corner_radius=3,
+            fg_color=('green', 'white')
+        )
         self.syncModeCheckbox.grid(row=0, column=0, padx=3)
 
-        vehiclesCountTitle = Label(extraServerParamsFrame2, text="Vehicles:", background='lightsteelblue', font=("Roboto", 10))
+        vehiclesCountTitle = Label(
+            extraServerParamsFrame2,
+            text="Vehicles:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         vehiclesCountTitle.grid(row=0, column=1)
-        vehiclesCountEntry = customtkinter.CTkEntry(extraServerParamsFrame2, width=150,
-            textvariable=self.trafficManagerVehicles, corner_radius=5)
+        vehiclesCountEntry = customtkinter.CTkEntry(
+            extraServerParamsFrame2,
+            width=150,
+            textvariable=self.trafficManagerVehicles,
+            corner_radius=5
+        )
         vehiclesCountEntry.grid(row=0, column=2, sticky="w", padx=5)
 
-        pedestriansCountTitle = Label(extraServerParamsFrame2, text="Pedestrians:", background='lightsteelblue', font=("Roboto", 10))
+        pedestriansCountTitle = Label(
+            extraServerParamsFrame2,
+            text="Pedestrians:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         pedestriansCountTitle.grid(row=0, column=3)
-        pedestriansCountEntry = customtkinter.CTkEntry(extraServerParamsFrame2, textvariable=self.trafficManagerPedestrians, corner_radius=5)
+        pedestriansCountEntry = customtkinter.CTkEntry(
+            extraServerParamsFrame2,
+            textvariable=self.trafficManagerPedestrians,
+            corner_radius=5
+        )
         pedestriansCountEntry.grid(row=0, column=4, sticky="w", padx=5)
-        
-        button_border = Frame(extraServerParamsFrame2, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
+
+        button_border = Frame(
+            extraServerParamsFrame2,
+            highlightbackground="white",
+            highlightthickness=1,
+            bd=0,
+            background='white'
+        )
         button_border.grid(row=0, column=5, sticky="w", padx=5)
-        self.changeCollisionButton = ttk.Button(button_border, text="Settings", 
-            style='W.TButton', width=8, command=self.onChangeCollisions)
+        self.changeCollisionButton = ttk.Button(
+            button_border,
+            text="Settings",
+            style='W.TButton',
+            width=8,
+            command=self.onChangeCollisions
+        )
         self.changeCollisionButton.pack(fill='both')
+        print("[gui] Traffic manager + collisions UI created")
 
         #---------------------
-
+        # Control unit & prediction addresses
+        print("[gui] Creating VCU/TPU address panel...")
         controlUnitUrlFrame = Frame(connectionCommonFrame, background='lightsteelblue')
         controlUnitUrlFrame.pack(pady=5)
         controlUnitUrlFrame.rowconfigure(0, weight=1)
@@ -390,111 +487,206 @@ class MainWindow(object):
         controlUnitUrlFrame.columnconfigure(6)
         controlUnitUrlFrame.columnconfigure(7, weight=10)
 
-        controlUnitTitle = Label(controlUnitUrlFrame, text="Vehicle control unit (VSU):", background='lightsteelblue', font=("Roboto", 10, "bold"))
+        controlUnitTitle = Label(
+            controlUnitUrlFrame,
+            text="Vehicle control unit (VSU):",
+            background='lightsteelblue',
+            font=("Roboto", 10, "bold")
+        )
         controlUnitTitle.grid(row=0, column=0, padx=5, columnspan=4, sticky="nw")
 
-        predictionTitle = Label(controlUnitUrlFrame, text="Traectory prediction unit (TPU):", background='lightsteelblue', font=("Roboto", 10, "bold"))
+        predictionTitle = Label(
+            controlUnitUrlFrame,
+            text="Traectory prediction unit (TPU):",
+            background='lightsteelblue',
+            font=("Roboto", 10, "bold")
+        )
         predictionTitle.grid(row=0, column=4, padx=5, columnspan=4, sticky="nw")
 
-        controlUnitUrlTitle = Label(controlUnitUrlFrame, text="Address:", background='lightsteelblue', font=("Roboto", 10))
+        controlUnitUrlTitle = Label(
+            controlUnitUrlFrame,
+            text="Address:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         controlUnitUrlTitle.grid(row=1, column=0, padx=5, sticky="w")
-        controlUnitUrlEntry = customtkinter.CTkEntry(controlUnitUrlFrame, textvariable=self.urlVCU, corner_radius=5)
+        controlUnitUrlEntry = customtkinter.CTkEntry(
+            controlUnitUrlFrame,
+            textvariable=self.urlVCU,
+            corner_radius=5
+        )
         controlUnitUrlEntry.grid(row=1, column=1, sticky="nwse")
 
-        controlUnitPortTitle = Label(controlUnitUrlFrame, text="Port:", background='lightsteelblue', font=("Roboto", 10))
+        controlUnitPortTitle = Label(
+            controlUnitUrlFrame,
+            text="Port:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         controlUnitPortTitle.grid(row=1, column=2, padx=5)
-        controlUnitPortEntry = customtkinter.CTkEntry(controlUnitUrlFrame, textvariable=self.portVCU, corner_radius=5)
+        controlUnitPortEntry = customtkinter.CTkEntry(
+            controlUnitUrlFrame,
+            textvariable=self.portVCU,
+            corner_radius=5
+        )
         controlUnitPortEntry.grid(row=1, column=3, sticky="nw", padx=5)
 
-        predictionServerUrlTitle = Label(controlUnitUrlFrame, text="Address:", background='lightsteelblue', font=("Roboto", 10))
+        predictionServerUrlTitle = Label(
+            controlUnitUrlFrame,
+            text="Address:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         predictionServerUrlTitle.grid(row=1, column=4, padx=5, sticky="w")
-        predictionServerUrlEntry = customtkinter.CTkEntry(controlUnitUrlFrame, textvariable=self.urlPSU, corner_radius=5)
+        predictionServerUrlEntry = customtkinter.CTkEntry(
+            controlUnitUrlFrame,
+            textvariable=self.urlPSU,
+            corner_radius=5
+        )
         predictionServerUrlEntry.grid(row=1, column=5, sticky="nw")
 
-        predictionServerPortTitle = Label(controlUnitUrlFrame, text="Port:", background='lightsteelblue', font=("Roboto", 10))
+        predictionServerPortTitle = Label(
+            controlUnitUrlFrame,
+            text="Port:",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         predictionServerPortTitle.grid(row=1, column=6, padx=5)
-        predictionServerPortEntry = customtkinter.CTkEntry(controlUnitUrlFrame, textvariable=self.portPSU, corner_radius=5)
+        predictionServerPortEntry = customtkinter.CTkEntry(
+            controlUnitUrlFrame,
+            textvariable=self.portPSU,
+            corner_radius=5
+        )
         predictionServerPortEntry.grid(row=1, column=7, sticky="nwse", padx=5)
+        print("[gui] VCU/TPU panel created")
 
+        # --- Connection buttons row
+        print("[gui] Creating connection buttons + status icons...")
         connectionFrame = Frame(connectionCommonFrame, background='lightsteelblue')
         connectionFrame.pack(anchor="w", fill="x")
-        connectionFrame.columnconfigure(0, weight = 0)
-        connectionFrame.columnconfigure(1, weight = 0)
-        connectionFrame.columnconfigure(2, weight = 0)
-        connectionFrame.columnconfigure(3, weight = 1)
+        connectionFrame.columnconfigure(0, weight=0)
+        connectionFrame.columnconfigure(1, weight=0)
+        connectionFrame.columnconfigure(2, weight=0)
+        connectionFrame.columnconfigure(3, weight=1)
 
         connectionFrame1 = Frame(connectionFrame, background='lightsteelblue')
         connectionFrame1.grid(row=0)
 
-        button_border = Frame(connectionFrame1, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
+        button_border = Frame(
+            connectionFrame1,
+            highlightbackground="white",
+            highlightthickness=1,
+            bd=0,
+            background='white'
+        )
         button_border.grid(row=0, column=1, sticky="w", pady=5, padx=10)
-        self.connectionButton =ttk.Button(button_border, text="Connect CARLA", 
-            style='W.TButton', command=self.onConnectClick)
+        self.connectionButton = ttk.Button(
+            button_border,
+            text="Connect CARLA",
+            style='W.TButton',
+            command=self.onConnectClick
+        )
         self.connectionButton.pack(fill='both')
-        
+
         self.imageCarlaStatusDisconnected = ImageTk.PhotoImage(Image.open("disconnected.png"))
         self.imageCarlaStatusConnected = ImageTk.PhotoImage(Image.open("ok.png"))
-        self.imageCarlaStatus = Label(connectionFrame1, image = self.imageCarlaStatusDisconnected)
+        self.imageCarlaStatus = Label(connectionFrame1, image=self.imageCarlaStatusDisconnected)
         self.imageCarlaStatus.grid(row=0, column=0, sticky="w", pady=5, padx=5)
 
         self.imageVCUDisconnected = ImageTk.PhotoImage(Image.open("disconnected.png"))
         self.imageVCUConnected = ImageTk.PhotoImage(Image.open("ok.png"))
-        self.imageVCUStatus = Label(connectionFrame1, image = self.imageVCUDisconnected)
+        self.imageVCUStatus = Label(connectionFrame1, image=self.imageVCUDisconnected)
         self.imageVCUStatus.grid(row=0, column=2, sticky="w", pady=5, padx=5)
 
         self.imageTPUDisconnected = ImageTk.PhotoImage(Image.open("disconnected.png"))
         self.imageTPUConnected = ImageTk.PhotoImage(Image.open("ok.png"))
-        self.imageTPUStatus = Label(connectionFrame1, image = self.imageTPUDisconnected)
+        self.imageTPUStatus = Label(connectionFrame1, image=self.imageTPUDisconnected)
         self.imageTPUStatus.grid(row=0, column=4, sticky="w", pady=5, padx=5)
 
-        button_border = Frame(connectionFrame1, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=3, sticky="w", pady=5, padx=10)        
-        self.controlUnitConnectionButton = ttk.Button(button_border, text="Connect VCU", 
-            style='W.TButton', command=self.onControlUnitConnectClick)
+        button_border = Frame(
+            connectionFrame1,
+            highlightbackground="white",
+            highlightthickness=1,
+            bd=0,
+            background='white'
+        )
+        button_border.grid(row=0, column=3, sticky="w", pady=5, padx=10)
+        self.controlUnitConnectionButton = ttk.Button(
+            button_border,
+            text="Connect VCU",
+            style='W.TButton',
+            command=self.onControlUnitConnectClick
+        )
         self.controlUnitConnectionButton.pack(fill='both')
 
-        button_border = Frame(connectionFrame1, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=5, sticky="w", pady=5, padx=10)        
-        self.predictionUnitConnectionButton = ttk.Button(button_border, text="Connect TPU", 
-            style='W.TButton', command=self.onPredictionUnitConnectClick)
+        button_border = Frame(
+            connectionFrame1,
+            highlightbackground="white",
+            highlightthickness=1,
+            bd=0,
+            background='white'
+        )
+        button_border.grid(row=0, column=5, sticky="w", pady=5, padx=10)
+        self.predictionUnitConnectionButton = ttk.Button(
+            button_border,
+            text="Connect TPU",
+            style='W.TButton',
+            command=self.onPredictionUnitConnectClick
+        )
         self.predictionUnitConnectionButton.pack(fill='both')
 
-        self.generationDescriptionText = Label(connectionFrame, text="Objects generation status is unknown yet", background='lightsteelblue', font=("Roboto", 10))
+        self.generationDescriptionText = Label(
+            connectionFrame,
+            text="Objects generation status is unknown yet",
+            background='lightsteelblue',
+            font=("Roboto", 10)
+        )
         self.generationDescriptionText.grid(row=1, columnspan=2, sticky="w", padx=5)
+        print("[gui] Connection buttons/labels created")
 
+        # Weather + maps panels
+        print("[gui] Creating weather panel...")
         self.prepareWeatherPanel(self.leftFrame)
+        print("[gui] Weather panel created")
 
+        print("[gui] Creating map selection panel...")
         self.prepareMapSelectionPanel(self.leftFrame)
+        print("[gui] Map selection panel created")
 
         # Vehicles frame
+        print("[gui] Creating vehicles frame + grid...")
         vehiclesFrame = Frame(self.leftFrame, background='lightsteelblue')
         vehiclesFrame.pack(expand=True, fill="both")
-        vehiclesTitle = Label(vehiclesFrame, text="VEHICLES LIST:", font=("Roboto", 11), 
-                              fg="white", bg="dodgerblue2")
+        vehiclesTitle = Label(
+            vehiclesFrame,
+            text="VEHICLES LIST:",
+            font=("Roboto", 11),
+            fg="white",
+            bg="dodgerblue2"
+        )
         vehiclesTitle.pack(anchor="nw", padx=1, fill="x")
 
         vehiclesGridFrame = Frame(vehiclesFrame)
-
-        self.gridVehicles = ttk.Treeview(vehiclesGridFrame,
-            column=("Name", "Manufacturer", "Model", 
-                    "Class", "Type", "Status"), 
-            height=3, show="headings")
-
+        self.gridVehicles = ttk.Treeview(
+            vehiclesGridFrame,
+            column=("Name", "Manufacturer", "Model", "Class", "Type", "Status"),
+            height=3,
+            show="headings"
+        )
         vehiclesGridFrame.pack(anchor="nw", expand=True, fill="both")
 
         scrollbar_yV = ttk.Scrollbar(vehiclesGridFrame, command=self.gridVehicles.yview)
         scrollbar_xV = ttk.Scrollbar(vehiclesGridFrame, command=self.gridVehicles.xview, orient="horizontal")
         self.gridVehicles.config(xscrollcommand=scrollbar_xV.set, yscrollcommand=scrollbar_yV.set)
         scrollbar_yV.pack(fill="y", side="right")
-        scrollbar_xV.pack(fill="x", side="bottom")        
+        scrollbar_xV.pack(fill="x", side="bottom")
         self.gridVehicles.pack(anchor="nw", expand=True, fill="both")
 
         self.initializeVehiclesList(self.usedVehicles, self.gridVehicles)
+        print("[gui] Vehicles grid initialized")
 
         # Vehicles actions panel
+        print("[gui] Creating vehicle actions panel...")
         panelVehiclesActions = Frame(vehiclesFrame, background='lightsteelblue')
         panelVehiclesActions.rowconfigure(0, weight=1)
         panelVehiclesActions.rowconfigure(1, weight=1)
@@ -504,92 +696,88 @@ class MainWindow(object):
 
         ttk.Style().theme_use('clam')
         style = ttk.Style()
-        style.configure('W.TButton', foreground = 'white', 
-            relief='flat', background='dodgerblue2', font=("Roboto", 10))
-        style.map("W.TButton",
+        style.configure(
+            'W.TButton',
+            foreground='white',
+            relief='flat',
+            background='dodgerblue2',
+            font=("Roboto", 10)
+        )
+        style.map(
+            "W.TButton",
             foreground=[('pressed', 'white'), ('active', 'white'), ('disabled', 'slategray')],
-            background=[('pressed', '!disabled', 'dodgerblue4'), ('active', 'dodgerblue3'), ('disabled', 'lightgray')])
+            background=[('pressed', '!disabled', 'dodgerblue4'),
+                        ('active', 'dodgerblue3'),
+                        ('disabled', 'lightgray')]
+        )
 
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=0, sticky="w", pady=10, padx=2)
-        selectVehicle = ttk.Button(button_border, text="Select", 
-            style='W.TButton', width=7, command=self.onSelectVehicleClick)
-        selectVehicle.pack(fill='both')
+        # Select, Spawn, Remove, Auto-run, Set as Ego, Set obstacle, Bird-eye view
+        def _add_vehicle_action_button(col, text, cmd, width):
+            button_border_local = Frame(
+                panelVehiclesActions,
+                highlightbackground="white",
+                highlightthickness=1,
+                bd=0,
+                background='white'
+            )
+            button_border_local.grid(row=0, column=col, sticky="w", pady=10, padx=2)
+            btn = ttk.Button(
+                button_border_local,
+                text=text,
+                style='W.TButton',
+                width=width,
+                command=cmd
+            )
+            btn.pack(fill='both')
+            return btn
 
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=1, sticky="w", pady=10, padx=2)
-        self.installVehicle = ttk.Button(button_border, text="Spawn", 
-            style='W.TButton', width=8, command=self.onInstallVehicle)
-        self.installVehicle.pack(fill='both')
-
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=3, sticky="w", pady=10, padx=2)
-        removeVehicle = ttk.Button(button_border, text="Remove", 
-            style='W.TButton', width=8, command=self.onRemoveVehicleClick)
-        removeVehicle.pack(fill='both')
-
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=4, sticky="w", pady=10, padx=2)
-        self.runVehicle = ttk.Button(button_border, text="Auto-run", 
-            style='W.TButton', width=8, command=self.onRunVehicleClick)
-        self.runVehicle.pack(fill='both')
-
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=5, sticky="w", pady=10, padx=2)
-        self.controlVehicle = ttk.Button(button_border, text=" Set as Ego ", 
-            style='W.TButton', width=10, command=self.startControlVehicleClick)
-        self.controlVehicle.pack(fill='both')
-
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=6, sticky="w", pady=10, padx=2)
-        self.generateObstacle = ttk.Button(button_border, text=" Set obstacle ", 
-            style='W.TButton', width=12, command=self.setObstacleForVehicleClick)
-        self.generateObstacle.pack(fill='both')
-
-        button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
-                         highlightthickness = 1, bd=0, background='white')        
-        button_border.grid(row=0, column=7, sticky="w", pady=10, padx=2)
-        self.topDownView = ttk.Button(button_border, text="Bird-eye view", 
-            style='W.TButton', width=12, command=self.showTopDownViewClick)
-        self.topDownView.pack(fill='both')
+        _add_vehicle_action_button(0, "Select", self.onSelectVehicleClick, 7)
+        self.installVehicle = _add_vehicle_action_button(1, "Spawn", self.onInstallVehicle, 8)
+        _add_vehicle_action_button(3, "Remove", self.onRemoveVehicleClick, 8)
+        self.runVehicle = _add_vehicle_action_button(4, "Auto-run", self.onRunVehicleClick, 8)
+        self.controlVehicle = _add_vehicle_action_button(5, " Set as Ego ", self.startControlVehicleClick, 10)
+        self.generateObstacle = _add_vehicle_action_button(6, " Set obstacle ", self.setObstacleForVehicleClick, 12)
+        self.topDownView = _add_vehicle_action_button(7, "Bird-eye view", self.showTopDownViewClick, 12)
+        print("[gui] Vehicle actions panel created")
 
         # Installed sensors frame
+        print("[gui] Creating sensors frame + grid...")
         sensorsFrame = Frame(self.leftFrame, background='lightsteelblue')
         sensorsFrame.pack(expand=True, fill="both")
 
-        self.sensorsPanelTitle = Label(sensorsFrame, textvariable=self.sensorsPanelTitle, font=("Roboto", 11), 
-                             fg="white", bg="dodgerblue2")
+        self.sensorsPanelTitle = Label(
+            sensorsFrame,
+            textvariable=self.sensorsPanelTitle,
+            font=("Roboto", 11),
+            fg="white",
+            bg="dodgerblue2"
+        )
         self.sensorsPanelTitle.pack(anchor="nw", padx=1, fill="x")
 
         sensorsGridFrame = Frame(sensorsFrame)
-
-        self.gridSensors = ttk.Treeview(sensorsGridFrame,
+        self.gridSensors = ttk.Treeview(
+            sensorsGridFrame,
             column=("colName", "colResolution", "colIsFront",
-                    "colPosition", "colYaw", "colFOV", "postProcessing"), 
-            height=2, show="headings")
-
+                    "colPosition", "colYaw", "colFOV", "postProcessing"),
+            height=2,
+            show="headings"
+        )
         sensorsGridFrame.pack(anchor="nw", expand=True, fill="both")
 
         scrollbar_yS = ttk.Scrollbar(sensorsGridFrame, command=self.gridVehicles.yview)
         scrollbar_xS = ttk.Scrollbar(sensorsGridFrame, command=self.gridVehicles.xview, orient="horizontal")
         self.gridSensors.config(xscrollcommand=scrollbar_xS.set, yscrollcommand=scrollbar_yS.set)
         scrollbar_yS.pack(fill="y", side="right")
-        scrollbar_xS.pack(fill="x", side="bottom")        
-
+        scrollbar_xS.pack(fill="x", side="bottom")
         self.gridSensors.pack(anchor="nw", expand=True, fill="both")
 
         self.leftFrame.grid(row=0, column=0, sticky="nesw")
 
-        self.initializeSensorsList(self.selectedVehicle, 
-                                   self.gridSensors)
+        self.initializeSensorsList(self.selectedVehicle, self.gridSensors)
+        print("[gui] Sensors grid initialized")
 
         # Sensors actions panel
+        print("[gui] Creating sensors actions panel...")
         panelSensorsActions = Frame(sensorsFrame, height=1, background='lightsteelblue')
         panelSensorsActions.rowconfigure(0)
         panelSensorsActions.columnconfigure(0)
@@ -618,20 +806,26 @@ class MainWindow(object):
             style='W.TButton', width=10, command=self.onRemoveSensorClick)
         removeSensor.pack(fill='both')
 
-        # Right (actions) frame definition
-        self.rightFrame = RightPane.RightFrame(self.rootWnd, bgcolor="white", carlaServerConnector=self.carlaConnectorService)
-        self.rightFrame.grid(row=0, column=1, sticky="nesw")
 
+        # Right (actions) frame definition
+        print("[gui] Creating RightFrame (video + controls)...")
+        self.rightFrame = RightPane.RightFrame(
+            self.rootWnd,
+            bgcolor="white",
+            carlaServerConnector=self.carlaConnectorService
+        )
+        self.rightFrame.grid(row=0, column=1, sticky="nesw")
+        print("[gui] RightFrame created and attached")
+
+        # Disable everything until connection
+        print("[gui] Disabling UI controls until CARLA connects...")
         self.enable_disable(self.rootWnd, "disabled")
 
-        #self.rootWnd.bind_all("<Key>", self.onKeyPressed)
+        # self.rootWnd.bind_all("<Key>", self.onKeyPressed)
 
-        #automatically connect to tpu to make it faster
-        #print("[gui] Connecting to TPU...")
-        #self.onPredictionUnitConnectClick()
-
-
+        print("[gui] Entering Tk mainloop()")
         self.rootWnd.mainloop()          # Show window and process window messages
+        print("[gui] mainloop() exited, __init__() end")
 
     #--------------------
 
@@ -940,9 +1134,9 @@ class MainWindow(object):
             self.imageVCUStatus.configure(image=self.imageVCUConnected)
 
     def onPredictionUnitConnectClick(self):
-        #this function is overwritten by following (same name)
+
         if self.predictionUnitConnectionState == False:
-            print("CONNECT TPU")
+
             self.saveSettings()
             self.carlaConnectorService.ConnectTPU(self.urlPSU.get(), self.portPSU.get())
 
@@ -959,7 +1153,6 @@ class MainWindow(object):
         if self.predictionUnitConnectionState == False:
 
             self.saveSettings()
-            print("CONNECT TPU button pressed")
             self.carlaConnectorService.ConnectTPU(self.urlPSU.get(), self.portPSU.get())
 
         else:

@@ -48,7 +48,7 @@ from agents.navigation.behavior_agent import BehaviorAgent
 
 # --- https://github.com/carla-simulator/carla/issues/4743
 
-class CarlaProcessorService(object):
+class CarlaProcessorService_headless(object):
 
     #-------------------------
     #--- Public properties ---
@@ -301,7 +301,11 @@ class CarlaProcessorService(object):
         error = ""
 
         try:
-
+            
+            print("[carla processor] Connecting to Carla server at {}:{}".format(
+                self.app_settings.carlaServerUrl,
+                self.app_settings.carlaServerMainPort))
+            
             self.carlaClient = carla.Client(
                 self.app_settings.carlaServerUrl, self.app_settings.carlaServerMainPort) 
             self.carlaClient.set_timeout(60000.0)
@@ -1195,18 +1199,18 @@ class CarlaProcessorService(object):
     # --- Enter after the ConnectTPU button is pressed
     def ConnectTPU(self, host, port):
 
-        print("Connecting to TPU: {}:{}".format(host, port))
+        print("[carla processor] Connecting to TPU: {}:{}".format(host, port))
         self.tpu_Connector = PredictionUnitConnector(self)
 
         if self.onPredictionUnitConnectionAttemptCompleted is not None:
             if self.tpu_Connector.connect(host, port) == True:
-                print("Connected to TPU: {}:{}".format(host, port))
+                print("[carla processor] Connected to TPU: {}:{}".format(host, port))
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = self.tpu_Connector
                 self.onPredictionUnitConnectionAttemptCompleted(True)
-                print("TPU connection attempt completed")
+                print("[carla processor] TPU connection attempt completed")
             else:
-                print("Failed to connect to TPU: {}:{}".format(host, port))
+                print("[carla processor] Failed to connect to TPU: {}:{}".format(host, port))
                 self.onPredictionUnitConnectionAttemptCompleted(False)
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = None
@@ -1223,7 +1227,7 @@ class CarlaProcessorService(object):
     # --- dataPackage: received data package (bytes array) 
     def OnVehicleControlReceived(self, dataPackage):
 
-        print("Raw data received: {}".format(dataPackage))
+        print("[carla processor] Raw data received: {}".format(dataPackage))
         self.DoActionFromVCU(dataPackage, ControlDataPackageItem(dataPackage))
 
     # --- Perform vehicle movement action

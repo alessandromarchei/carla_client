@@ -1,92 +1,102 @@
+# TCP/ServerReceiver.py
+
 from .ServerBase import ServerBase
-from .utils.visualization import add_mask_segmentation
-import cv2
+from .Buffer import BlockingQueue
+import struct
 import numpy as np
-import time
+import threading
+
+HEADER_FMT = "!IIII"  # frame_id, height, width, channels
+HEADER_SIZE = struct.calcsize(HEADER_FMT)
+
 
 class ServerReceiver(ServerBase):
-    def __init__(self, port, in_queue, visualize=False, save=False, fps=10.0):
+    """
+    TCP receiver
+    - Receives (frame_id, H, W, C, payload)
+    - Matches with original frame from sender_queue
+    - Stores finished results internally
+    - Provides receiveDataFromPrediction() for external modules to get results, and then flush that data
+    """
+
+    def __init__(self, port, input_queue: BlockingQueue):
         super().__init__(port)
-        self.in_queue = in_queue
-        self.visualize = visualize
-        self.save = save
-        self.fps = fps
-        self.frame_idx = 0
+        self.input_queue = input_queue
 
-        if visualize:
-            cv2.namedWindow("Input Image")
-            cv2.namedWindow("Segmentation Overlay")
+        # store matched results: frame_id → (frame_dict, mask)
+        self.ready = {}
+        self.lock = threading.Lock()
 
-    def stop(self):
-        print("[ServerReceiver] Stopping receiver...")
-        self.running = False
-
-        if self.visualize:
-            cv2.destroyAllWindows()
-
-        super().stop()
-
-    # ------------------------------------------
-    # run()
-    # ------------------------------------------
-    def run(self):
-        if not self.startServer():
-            print("[ServerReceiver] Failed to start")
-            return
-
-        mask_size = 320 * 640
-
-        while self.running:
-            print(f"[ServerReceiver] Waiting for {mask_size} bytes...")
-
-            # blocking receive
-            try:
-                data = self.recvall(mask_size)
-            except:
-                print("[ServerReceiver] Disconnected.")
-                self.running = False
-                break
-
-            if not data:
-                print("[ServerReceiver] Disconnected.")
-                break
-
-            # pair with sent frame
-            sf = self.in_queue.pop(timeout=0.1)
-            if sf is None:
-                print("[ServerReceiver] No paired frame available, exiting.")
-                break
-
-            mask = np.frombuffer(data, dtype=np.uint8).reshape((320, 640))
-
-            if self.visualize:
-                overlay = add_mask_segmentation(sf["img"], mask, 0.5)
-                cv2.imshow("Input Image", sf["img"])
-                cv2.imshow("Segmentation Overlay", overlay)
-                key = cv2.waitKey(int(max(1, 1000 / self.fps)))
-                if key == 27:
-                    self.running = False
-                    break
-
-            if self.save:
-                overlay = add_mask_segmentation(sf["img"], mask, 0.5)
-                combined = np.vstack((sf["img"], overlay))
-                name = f"result_{self.frame_idx}.png"
-                cv2.imwrite(name, combined)
-                print("[ServerReceiver] Saved", name)
-                self.frame_idx += 1
-
-    # Python recv-all helper (MSG_WAITALL equivalent)
+    # MSG_WAITALL equivalent
     def recvall(self, size):
         data = bytearray()
-        while len(data) < size:
-            if not self.running:
-                return None
-            try:
-                packet = self.client_sock.recv(size - len(data))
-            except:
-                return None
+        while len(data) < size and self.running:
+            packet = self.client_sock.recv(size - len(data))
             if not packet:
                 return None
             data.extend(packet)
         return data
+
+    def run(self):
+        if not self.startServer():
+            return
+
+        while self.running:
+
+            #Receive metadata header
+            metadata = self.recvall(HEADER_SIZE)
+            if not metadata:
+                break
+
+            try:
+                frame_id, H, W, C = struct.unpack(HEADER_FMT, metadata)
+            except:
+                print("[Receiver] Header unpack error")
+                break
+
+            payload_size = H * W * C
+
+            # Receive mask payload
+            payload = self.recvall(payload_size)
+            if not payload:
+                break
+
+            mask = np.frombuffer(payload, dtype=np.uint8).reshape((H, W, C))
+
+            # Retrieve matching original frame from sender_queue
+            original = None
+            while self.running and original is None:
+                original = self.input_queue.pop(timeout=0.1)
+
+            if original is None:
+                continue
+
+            # Store result internally
+            with self.lock:
+                self.ready[frame_id] = (original, mask)
+
+        self.running = False
+
+    def receiveDataFromPrediction(self, frame_id=None):
+        """
+        If frame_id given:
+            return specific (frame, mask) if available.
+        Else:
+            return the latest (frame, mask).
+        Returned data is removed from internal storage.
+        """
+        with self.lock:
+            if frame_id is not None:
+                if frame_id in self.ready:
+                    result = self.ready.pop(frame_id)
+                    return result
+                else:
+                    return None
+
+            # No frame_id → return latest available
+            if not self.ready:
+                return None
+
+            # get max frame_id (latest)
+            latest_id = max(self.ready.keys())
+            return self.ready.pop(latest_id)

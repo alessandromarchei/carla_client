@@ -1,6 +1,3 @@
-# ----------------------------------------------
-# Thread-safe blocking queue 
-# ----------------------------------------------
 import queue
 
 class BlockingQueue:
@@ -22,9 +19,8 @@ class BlockingQueue:
 
     def stop(self):
         self.stopped = True
-        # unblock any waiting get()
+        #unblock eventual blocked pops
         try:
-            self.q.get_nowait()
+            self.q.put_nowait(None)
         except:
             pass
-
