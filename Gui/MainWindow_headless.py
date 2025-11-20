@@ -36,6 +36,16 @@ from tkinter import ttk
 from Model.Vehicle import Vehicle
 from Service.Enumerations import CarlaActor
 
+
+def choose_vehicle(vehicles, name_contains):
+    name_contains = name_contains.lower()
+    for v in vehicles:
+        if name_contains in v.Name.lower() or name_contains in v.Model.lower():
+            return v
+    return None
+
+
+
 class MainWindow_headless(object):
 
     #--------------------------
@@ -382,7 +392,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', width=8, command=self.onChangeCollisions)
         # self.changeCollisionButton.pack(fill='both')
         print("[headless gui] Change collision button prepared")
-        self.onChangeCollisions()
+        # self.onChangeCollisions()
 
         # #---------------------
 
@@ -442,7 +452,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', command=self.onConnectClick)
         # self.connectionButton.pack(fill='both')
         print("[headless gui] Connect CARLA button prepared")
-        self.onConnectClick()
+        # self.onConnectClick()
         
         # self.imageCarlaStatusDisconnected = ImageTk.PhotoImage(Image.open("disconnected.png"))
         # self.imageCarlaStatusConnected = ImageTk.PhotoImage(Image.open("ok.png"))
@@ -466,7 +476,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', command=self.onControlUnitConnectClick)
         # self.controlUnitConnectionButton.pack(fill='both')
         print("[headless gui] Connect VCU button prepared")
-        self.onControlUnitConnectClick()
+        # self.onControlUnitConnectClick()
 
         # button_border = Frame(connectionFrame1, highlightbackground = "white", 
         #                  highlightthickness = 1, bd=0, background='white')        
@@ -475,7 +485,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', command=self.onPredictionUnitConnectClick)
         # self.predictionUnitConnectionButton.pack(fill='both')
         print("[headless gui] Connect TPU button prepared")
-        self.onPredictionUnitConnectClick()
+        # self.onPredictionUnitConnectClick()
 
         # self.generationDescriptionText = Label(connectionFrame, text="Objects generation status is unknown yet", background='lightsteelblue', font=("Roboto", 10))
         # self.generationDescriptionText.grid(row=1, columnspan=2, sticky="w", padx=5)
@@ -483,7 +493,7 @@ class MainWindow_headless(object):
         # self.prepareWeatherPanel(self.leftFrame)
 
         print("[headless gui] Loading CARLA world")
-        self.LoadCarlaWorld()
+        # self.LoadCarlaWorld()
 
         # # Vehicles frame
         # vehiclesFrame = Frame(self.leftFrame, background='lightsteelblue')
@@ -543,7 +553,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', width=8, command=self.onInstallVehicle)
         # self.installVehicle.pack(fill='both')
         print("[headless gui] Spawn vehicle button prepared")
-        self.onInstallVehicle()
+        # self.onInstallVehicle()
 
         # button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
         #                  highlightthickness = 1, bd=0, background='white')        
@@ -560,7 +570,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', width=8, command=self.onRunVehicleClick)
         # self.runVehicle.pack(fill='both')
         print("[headless gui] Auto-run vehicle button prepared")
-        self.onRunVehicleClick()
+        # self.onRunVehicleClick()
 
         # button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
         #                  highlightthickness = 1, bd=0, background='white')        
@@ -569,7 +579,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', width=10, command=self.startControlVehicleClick)
         # self.controlVehicle.pack(fill='both')
         print("[headless gui] Set as Ego vehicle button prepared")
-        self.startControlVehicleClick()
+        # self.startControlVehicleClick()
 
         # button_border = Frame(panelVehiclesActions, highlightbackground = "white", 
         #                  highlightthickness = 1, bd=0, background='white')        
@@ -613,8 +623,8 @@ class MainWindow_headless(object):
         # self.leftFrame.grid(row=0, column=0, sticky="nesw")
 
         print("[headless gui] Initializing sensors list in GUI")
-        self.initializeSensorsList(self.selectedVehicle, 
-                                   self.gridSensors)
+        # self.initializeSensorsList(self.selectedVehicle, 
+        #                            self.gridSensors)
 
         # Sensors actions panel
         # panelSensorsActions = Frame(sensorsFrame, height=1, background='lightsteelblue')
@@ -631,7 +641,7 @@ class MainWindow_headless(object):
         #     style='W.TButton', width=10, command=self.onAddSensorClick)
         # addSensor.pack(fill='both')
         print("[headless gui] Add sensor button prepared")
-        self.onAddSensorClick()
+        # self.onAddSensorClick()
 
         # button_border = Frame(panelSensorsActions, highlightbackground = "white", 
         #                  highlightthickness = 1, bd=0, background='white')        
@@ -658,13 +668,14 @@ class MainWindow_headless(object):
 
         # self.rootWnd.mainloop()          # Show window and process window messages
 
+        self.run()
         #endless loop 
-        try:
-            while True:
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            self.carlaConnectorService.StopThreads()
-            print("[headless gui] Shutting down headless carla client.")
+        # try:
+        #     while True:
+        #             time.sleep(0.1)
+        # except KeyboardInterrupt:
+        #     self.carlaConnectorService.StopThreads()
+        #     print("[headless gui] Shutting down headless carla client.")
 
     #--------------------
 
@@ -675,52 +686,61 @@ class MainWindow_headless(object):
     #--- Initialize sensors grid              ---
     #--- vehicle: Currently selected vehicle ---
     #--- gridSensors: Sensors grid control    ---
+    # def initializeSensorsList(self, vehicle, gridSensors):
+        
+    #     for row in self.gridSensors.get_children():
+    #         self.gridSensors.delete(row)
+    #         self.rootWnd.update()
+        
+    #     self.selectedSensor = None
+
+    #     gridSensors.column('# 0', minwidth=0, width=0, stretch=False)
+    #     gridSensors.column("colName", anchor='center', stretch=True, minwidth=140)
+    #     gridSensors.heading("colName", text="Name")
+    #     gridSensors.column("colResolution", anchor='center', stretch=False, minwidth=80, width=80)
+    #     gridSensors.heading("colResolution", text="Resolution")
+    #     gridSensors.column("colIsFront", anchor='center', stretch=False, minwidth=170, width=50)
+    #     gridSensors.heading("colIsFront", text="Front")
+    #     gridSensors.column("colPosition", anchor='center', stretch=False, minwidth=170, width=130)
+    #     gridSensors.heading("colPosition", text="Position (X/Y/Z)")
+    #     gridSensors.column("colYaw", anchor='center', stretch=False, minwidth=170, width=60)
+    #     gridSensors.heading("colYaw", text="Yaw")
+    #     gridSensors.column("colFOV", anchor='center', minwidth=50, width=50, stretch=False)
+    #     gridSensors.heading("colFOV", text="FOV (°)")
+    #     gridSensors.column("postProcessing", anchor='center', minwidth=110, width=110, stretch=False)
+    #     gridSensors.heading("postProcessing", text="Post processing")
+
+    #     if vehicle is not None:
+    #         for item in vehicle.InstalledVideoCams:
+    #             if item is not None:
+    #                 sensor: VideoCam = item
+    #                 gridSensors.insert('', 'end',
+    #                     values=(sensor.name,
+    #                         "{0:.0f} * {1:.0f}".format(sensor.frameSizeX, sensor.frameSizeY),                  
+    #                         "{}".format("Yes" if sensor.isFront else ""),
+    #                         "{0:.2f} / {1:.2f} / {2:.2f}".format(
+    #                             sensor.position.positionX, 
+    #                             sensor.position.positionY, 
+    #                             sensor.position.positionZ),
+    #                         "{0:.2f}".format(sensor.rotationYaw),
+    #                         "{0:.2f}".format(sensor.fieldOfVision),
+    #                         "{}".format(sensor.postProcessing)))
+    #         gridSensors.bind("<<TreeviewSelect>>", self.onSelectSensor)
+    #         if len(gridSensors.get_children()) > 0:
+    #             first = gridSensors.get_children()[0]
+    #             gridSensors.focus(first)
+    #             gridSensors.selection_set(first)
+    #             self.selectedSensor = vehicle.InstalledVideoCams[0]
+
     def initializeSensorsList(self, vehicle, gridSensors):
-        
-        for row in self.gridSensors.get_children():
-            self.gridSensors.delete(row)
-            self.rootWnd.update()
-        
-        self.selectedSensor = None
-
-        gridSensors.column('# 0', minwidth=0, width=0, stretch=False)
-        gridSensors.column("colName", anchor='center', stretch=True, minwidth=140)
-        gridSensors.heading("colName", text="Name")
-        gridSensors.column("colResolution", anchor='center', stretch=False, minwidth=80, width=80)
-        gridSensors.heading("colResolution", text="Resolution")
-        gridSensors.column("colIsFront", anchor='center', stretch=False, minwidth=170, width=50)
-        gridSensors.heading("colIsFront", text="Front")
-        gridSensors.column("colPosition", anchor='center', stretch=False, minwidth=170, width=130)
-        gridSensors.heading("colPosition", text="Position (X/Y/Z)")
-        gridSensors.column("colYaw", anchor='center', stretch=False, minwidth=170, width=60)
-        gridSensors.heading("colYaw", text="Yaw")
-        gridSensors.column("colFOV", anchor='center', minwidth=50, width=50, stretch=False)
-        gridSensors.heading("colFOV", text="FOV (°)")
-        gridSensors.column("postProcessing", anchor='center', minwidth=110, width=110, stretch=False)
-        gridSensors.heading("postProcessing", text="Post processing")
-
-        if vehicle is not None:
-            for item in vehicle.InstalledVideoCams:
-                if item is not None:
-                    sensor: VideoCam = item
-                    gridSensors.insert('', 'end',
-                        values=(sensor.name,
-                            "{0:.0f} * {1:.0f}".format(sensor.frameSizeX, sensor.frameSizeY),                  
-                            "{}".format("Yes" if sensor.isFront else ""),
-                            "{0:.2f} / {1:.2f} / {2:.2f}".format(
-                                sensor.position.positionX, 
-                                sensor.position.positionY, 
-                                sensor.position.positionZ),
-                            "{0:.2f}".format(sensor.rotationYaw),
-                            "{0:.2f}".format(sensor.fieldOfVision),
-                            "{}".format(sensor.postProcessing)))
-            gridSensors.bind("<<TreeviewSelect>>", self.onSelectSensor)
-            if len(gridSensors.get_children()) > 0:
-                first = gridSensors.get_children()[0]
-                gridSensors.focus(first)
-                gridSensors.selection_set(first)
+        if gridSensors is None:
+            # headless → just record selectedSensor correctly
+            if vehicle is not None and len(vehicle.InstalledVideoCams) > 0:
                 self.selectedSensor = vehicle.InstalledVideoCams[0]
-            
+            else:
+                self.selectedSensor = None
+            return
+
     #--- Initialize vehicles grid              ---
     #--- sensors: Provided vehicles collection ---
     #--- gridVehicles: Vehicles grid control    ---
@@ -975,19 +995,6 @@ class MainWindow_headless(object):
             self.controlUnitConnectionState = False;
             # self.imageVCUStatus.configure(image=self.imageVCUConnected)
 
-    def onPredictionUnitConnectClick(self):
-        #this function is overwritten by following (same name)
-        if self.predictionUnitConnectionState == False:
-            print("CONNECT TPU")
-            self.saveSettings()
-            self.carlaConnectorService.ConnectTPU(self.urlPSU.get(), self.portPSU.get())
-
-        else:
-            self.carlaConnectorService.DisconnectTPU()
-            self.predictionUnitConnectionButton.configure(text="Connect TPU")
-            self.predictionUnitConnectionState = False;
-            # self.imageTPUStatus.configure(image=self.imageTPUConnected)
-
 
     #--- Connect button is clicked event handler
     def onPredictionUnitConnectClick(self):
@@ -996,7 +1003,7 @@ class MainWindow_headless(object):
 
             self.saveSettings()
             print("CONNECT TPU button pressed")
-            self.carlaConnectorService.ConnectTPU(self.urlPSU, self.portPSU)
+            self.carlaConnectorService.ConnectTPU()
 
         else:
             self.carlaConnectorService.DisconnectTPU()
@@ -1139,22 +1146,6 @@ class MainWindow_headless(object):
             print("[headless_gui][ERROR] VCU connection error")
 
 
-    # --- Connection to TPU attempt is completed event handler
-    # --- result: connected successfully if true, otherwise false
-    def onPredictionUnitConnectionAttemptCompleted(self, result):
-
-        # if result == True:
-        #     self.predictionUnitConnectionButton.configure(text="Disconnect TPU")
-        #     self.predictionUnitConnectionState = True;
-        #     self.imageTPUStatus.configure(image=self.imageTPUConnected)
-        # else:
-        #     messagebox.showwarning(title="Warning", message="Error connection to prediction unit")
-        if result:
-            print("[headless_gui] TPU connected")
-            self.predictionUnitConnectionState = True;
-        else:
-            print("[headless_gui][ERROR] TPU connection error")
-
     # --- Connection to VCU attempt is completed event handler
     # --- result: connected successfully if true, otherwise false
     def onPredictionUnitConnectionAttemptCompleted(self, result):
@@ -1179,45 +1170,10 @@ class MainWindow_headless(object):
     # --- description: traffic generation results description
     def onLoadWorldAttemptCompleted(self, result, vehicles, error, description):
 
-        # self.progressWindow.hide()
-
-        # if result == True:
-
-        #     # --- Create displayable own vehicles list
-        #     self.availableVehicles = list()
-        
-        #     for vehicle in vehicles:
-
-        #         svar = ""
-
-        #         if len(vehicle.tags) > 2:
-        #             svar = vehicle.tags[2]
-
-        #         ownVehicle = Vehicle(str(uuid.uuid4()), "", vehicle.tags[1],
-        #                          svar, "", 
-        #                          str(vehicle.get_attribute("generation")), 
-        #                          vehicle.id, 
-        #                          vehicle.get_attribute("base_type").as_str(),
-        #                          vehicle.get_attribute("special_type").as_str(),
-        #                          vehicle.get_attribute("has_lights").as_bool(),
-        #                          vehicle.get_attribute("has_dynamic_doors").as_bool())
-
-        #         self.availableVehicles.append(ownVehicle)
+        if result == True:
             
-        #     self.enable_disable(self.rootWnd, "normal")
-        #     self.changeWeatherButton.configure(state="disabled", width=10)
-        #     self.changeWeatherButton.update()
-        #     self.weatherDesc.config(state="disabled")
-        #     self.generateObstacle.configure(state="disabled")
-        #     self.processControlVehicleButton(self.selectedVehicle)
-        #     self.processRunVehicleButton(self.selectedVehicle)
-        # else:
-        #     messagebox.showerror(title="Error", message=error)
-
-        # self.generationDescriptionText.configure(text=description)
-        if result:
-            print("[headless_gui] CARLA world loaded")
-                # --- Create displayable own vehicles list
+            print("[headless_gui] CARLA world loaded with {} vehicles".format(len(vehicles)))
+            # --- Create displayable own vehicles list
             self.availableVehicles = list()
         
             for vehicle in vehicles:
@@ -1228,18 +1184,21 @@ class MainWindow_headless(object):
                     svar = vehicle.tags[2]
 
                 ownVehicle = Vehicle(str(uuid.uuid4()), "", vehicle.tags[1],
-                                    svar, "", 
-                                    str(vehicle.get_attribute("generation")), 
-                                    vehicle.id, 
-                                    vehicle.get_attribute("base_type").as_str(),
-                                    vehicle.get_attribute("special_type").as_str(),
-                                    vehicle.get_attribute("has_lights").as_bool(),
-                                    vehicle.get_attribute("has_dynamic_doors").as_bool())
+                                 svar, "", 
+                                 str(vehicle.get_attribute("generation")), 
+                                 vehicle.id, 
+                                 vehicle.get_attribute("base_type").as_str(),
+                                 vehicle.get_attribute("special_type").as_str(),
+                                 vehicle.get_attribute("has_lights").as_bool(),
+                                 vehicle.get_attribute("has_dynamic_doors").as_bool())
 
                 self.availableVehicles.append(ownVehicle)
+            
+            print("[headless_gui] Available vehicles list created with {} vehicles".format(len(self.availableVehicles)))
+            # self.processControlVehicleButton(self.selectedVehicle)
+            # self.processRunVehicleButton(self.selectedVehicle)
         else:
-            print("[headless_gui][ERROR] CARLA world loading error")
-
+            messagebox.showerror(title="Error", message=error)
 
 
     # --- Load CARLA' world (city map) attempt is completed event handler
@@ -1255,15 +1214,15 @@ class MainWindow_headless(object):
             print("[headless_gui][ERROR] Vehicle spawning error: {}".format(error))
         else:
             self.selectedVehicle.status = 1
-            self.installVehicle.configure(state="disabled")
-            self.generateObstacle.configure(state="normal")
-            self.processRunVehicleButton(self.selectedVehicle)
+            # self.installVehicle.configure(state="disabled")
+            # self.generateObstacle.configure(state="normal")
+            # self.processRunVehicleButton(self.selectedVehicle)
             # row = self.gridVehicles.get_children()[self.selectedVehicleIndex]
             
             # self.gridVehicles.set(row, column="Status", value=self.selectedVehicle.get_status_text())            
 
-            self.processControlVehicleButton(self.selectedVehicle)
-            self.processSpawnVehicle(self.selectedVehicle)
+            # self.processControlVehicleButton(self.selectedVehicle)
+            # self.processSpawnVehicle(self.selectedVehicle)
             
             # self.gridVehicles.item(row, tags='bold')
             self.carlaConnectorService.SetSelectedVehicle(self.selectedVehicle.Uuid, False)
@@ -1272,11 +1231,23 @@ class MainWindow_headless(object):
     # --- New video frame is recieved event handler
     # --- frame: newly recieved video frame byte array
     # --- params: parent sensor parameters
-    def onNewVideoFrameIsRecieved(self, sensorNum, frame, raw_data, params, 
-                                  clientFps, averageFps, serverFps):
+    def onNewVideoFrameIsRecieved(self, sensorNum, frame, raw_data, params,
+                                clientFps, averageFps, serverFps):
 
-        self.rightFrame.NewVideoFrameReceived(sensorNum, frame, raw_data, params,
-                                              clientFps, averageFps, serverFps)
+        # GUI mode?
+        if getattr(self, "rightFrame", None) is not None:
+            try:
+                self.rightFrame.NewVideoFrameReceived(
+                    sensorNum, frame, raw_data, params,
+                    clientFps, averageFps, serverFps
+                )
+            except Exception as e:
+                print("[ERROR] GUI callback failed:", e)
+        else:
+            # CLI mode—ignore or print once
+            # print(f"[CLI] Frame for sensor {sensorNum} (no GUI)")
+            pass
+
 
     # --- Vehicle has been started on auto-pilot event handler
     # --- result: event result (True/False)
@@ -1625,3 +1596,481 @@ class MainWindow_headless(object):
         #     self.rootWnd.wait_window(topDownViewWnd.top)
         # else:
         #     self.carlaConnectorService.stopTopDownSensor()
+
+
+# ------------------------------------------------------
+    # Commands
+    # ------------------------------------------------------
+
+    def cmd_ConnectToCarlaServer(self):
+
+        if self.connectionState == False:
+            self.saveSettings()
+            
+            print(f"[CLI] Connecting to CARLA at {self.urlCarla}:{self.portCarla}...")
+            self.carlaclient_thread = self.carlaConnectorService.RunCarlaConnectionThread(self.app_settings)
+            self.carlaclient_thread.join()
+            print("[CLI] Connected.")
+        else:
+            print("[CLI] Already connected.")
+
+    def cmd_DisconnectFromCarlaServer(self):
+
+        if self.connectionState == True:
+            self.saveSettings()
+            
+            print(f"[CLI] Disconnecting from CARLA at {self.urlCarla}:{self.portCarla}...")
+            self.carlaclient_thread.stop()
+            self.carlaclient_thread.join()
+            print("[CLI] Disconnected.")
+
+            self.connectionState = False
+        else:
+            print("[CLI] Already disconnected.")
+
+    def cmd_LoadCarlaWorld(self, map_name):
+        if self.connectionState == False:
+            print("[CLI] Not connected. Run 'connect' first.")
+            return
+
+        # 1) Get available maps directly from CARLA
+        try:
+            available_maps = self.carlaConnectorService.carlaClient.get_available_maps()
+        except Exception as e:
+            print("[CLI] ERROR: Unable to query available maps:", e)
+            return
+
+        # Normalize
+        # Example incoming -> "/Game/Carla/Maps/Town10HD_Opt"
+        normalized_maps = [os.path.basename(m) for m in available_maps]
+
+        print("\n[CLI] Available maps:")
+        for m in normalized_maps:
+            print("  -", m)
+        print()
+
+        # 2) Check if user map_name exists
+        if map_name not in normalized_maps:
+            print(f"[CLI] ERROR: Map '{map_name}' is NOT available.")
+            print("Choose one from the list above.")
+            return
+
+        print(f"[CLI] Loading world '{map_name}' ...")
+
+        # 3) Prepare the internal name EXACTLY like GUI does:
+        #    (GUI uses: self.selectedMap.get().split('/'), take last item)
+        selected_map_full = None
+        for m in available_maps:
+            if m.endswith(map_name):
+                selected_map_full = m
+                break
+
+        if selected_map_full is None:
+            print(f"[CLI] ERROR: Could not find full CARLA path for map '{map_name}'.")
+            return
+
+        # 4) extract short name (same logic used in GUI)
+        items = selected_map_full.split("/")
+        short_name = items[-1]
+
+        # 5) Load the world using the CARLA connector thread
+        activethread = self.carlaConnectorService.RunLoadCarlaWorldThread(
+            self.app_settings,
+            short_name
+        )
+
+        activethread.join()
+        print("[CLI] World loaded successfully.\n")
+
+
+        #now here laod the vehicles available in the world
+        print("[CLI] Loading available vehicles in the world...")
+
+
+    def cmd_ListAvailableMaps(self):
+        if self.connectionState == False:
+            print("[CLI] Not connected. Run 'connect' first.")
+            return
+
+        # 1) Get available maps directly from CARLA
+        try:
+            available_maps = self.carlaConnectorService.carlaClient.get_available_maps()
+        except Exception as e:
+            print("[CLI] ERROR: Unable to query available maps:", e)
+            return
+
+        # Normalize
+        # Example incoming -> "/Game/Carla/Maps/Town10HD_Opt"
+        normalized_maps = [os.path.basename(m) for m in available_maps]
+
+        print("\n[CLI] Available maps:")
+        for m in normalized_maps:
+            print("  -", m)
+        print()
+
+    def cmd_Cars(self):
+        if not self.connectionState:
+            print("[CLI] Not connected. Run 'connect' first.")
+            return
+
+        if self.availableVehicles is not None and len(self.availableVehicles) > 0:
+            print("\n[CLI] AVAILABLE VEHICLES:")
+            for v in self.availableVehicles:
+                print(f"  - {v.Name} ({v.Manufacturer} {v.Model})   (blueprint={v.BlueprintID})")
+
+        print("\n[CLI] CURRENT USED VEHICLES:")
+        for v in self.usedVehicles:
+            print(f"  - {v.Name}  (status={v.status})")
+        print()
+
+    def cmd_ShowSelectedCar(self):
+        if self.selectedVehicle is None:
+            print("[CLI] No vehicle selected.")
+            return
+
+        v = self.selectedVehicle
+        print("\n[CLI] SELECTED VEHICLE:")
+        print(f"  Name: {v.Name}")
+        print(f"  Manufacturer: {v.Manufacturer}")
+        print(f"  Model: {v.Model}")
+        print(f"  UUID: {v.Uuid}")
+        print(f"  Status: {v.status}")
+        print("")
+
+    def cmd_ShowSensorsSelectedCar(self):
+        if self.selectedVehicle is None:
+            print("[CLI] No vehicle selected.")
+            return
+
+        v = self.selectedVehicle
+
+        print(f"\n[CLI] SENSORS for {v.Name}:")
+        if len(v.InstalledVideoCams) == 0:
+            print("  No sensors installed.")
+            return
+
+        for cam in v.InstalledVideoCams:
+            print("  ---------------- VIDEO CAMERA ----------------")
+            print(f"    Name:            {cam.name}")
+            print(f"    Resolution:      {cam.frameSizeX:.0f} × {cam.frameSizeY:.0f}")
+            print(f"    Front Camera:    {'Yes' if cam.isFront else 'No'}")
+            print(f"    Position:        X={cam.position.positionX:.2f}, "
+                f"Y={cam.position.positionY:.2f}, Z={cam.position.positionZ:.2f}")
+            print(f"    Yaw:             {cam.rotationYaw:.2f}°")
+            print(f"    Field of View:   {cam.fieldOfVision:.2f}°")
+            print(f"    Post-Processing: {cam.postProcessing}")
+            print("  -----------------------------------------------\n")
+
+
+    """
+    Equivalent to OnSelectVehicle in GUI
+    It selects a vehicle from usedVehicles by name and makes it selectedVehicle
+    """
+    def cmd_SelectCar(self, name):
+        
+        if len(self.usedVehicles) == 0:
+            print("[CLI] No used vehicles loaded.")
+            return
+
+        # Find matching vehicle by name (case insensitive)
+        idx = -1
+        for i, v in enumerate(self.usedVehicles):
+            if v.Name.lower() == name.lower():
+                idx = i
+                break
+
+        if idx == -1:
+            print(f"[CLI] Vehicle '{name}' not found in usedVehicles.")
+            return
+
+        # ==== REPLICATE GUI LOGIC =====
+        self.selectedVehicleIndex = idx
+        self.selectedVehicle = self.usedVehicles[idx]
+        v = self.selectedVehicle
+
+        print(f"[CLI] SELECTED VEHICLE: {v.Name}")
+        print(f"[CLI] Status = {v.status}")
+
+        if self.connectionState:
+            print("[CLI] Connected: evaluating status...")
+
+            if v.status > 0:
+                print("[CLI] Vehicle already spawned or running. Spawn disabled.")
+            else:
+                print("[CLI] Vehicle not spawned yet. Spawn enabled.")
+
+        # These calls configure internal
+        # self.processSpawnVehicle(v)   uses gui
+        # self.processControlVehicleButton(v)
+        # self.processRunVehicleButton(v)
+
+        # simulate setSelectedVehicle
+        self.carlaConnectorService.SetSelectedVehicle(v.Uuid, False)
+
+        # Sensors update (no GUI, but internal logic preserved)
+        self.initializeSensorsList(v, None)   
+
+        print(f"[CLI] Vehicle '{v.Name}' selected.")
+
+    """
+    Equivalent to OnSelectVehicleClick in GUI
+    Bring a vehicle from availableVehicles to usedVehicles
+    """
+    def cmd_AddCar(self, name):
+        # Find in available vehicles
+        match = None
+        for v in self.availableVehicles:
+            if v.Name.lower() == name.lower():
+                match = v
+                break
+
+        if match is None:
+            print(f"[CLI] ERROR: Vehicle '{name}' not found in availableVehicles.")
+            return
+
+        # duplicate object (as GUI does)
+        import copy
+        new_vehicle = copy.deepcopy(match)
+        new_vehicle.Uuid = str(uuid.uuid4())
+        new_vehicle.status = 0
+
+        # append
+        self.usedVehicles.append(new_vehicle)
+        self.selectedVehicle = new_vehicle
+        self.selectedVehicleIndex = len(self.usedVehicles) - 1
+
+        # serialize like GUI
+        new_vehicle.serialize(".", True)
+
+        print(f"[CLI] Added vehicle '{new_vehicle.Name}'.")
+
+    """
+    Equivalent to OnRemoveVehicleClick in GUI
+    """
+    def cmd_RemoveCar(self, name):
+        idx = -1
+        for i, v in enumerate(self.usedVehicles):
+            if v.Name.lower() == name.lower():
+                idx = i
+                break
+
+        if idx == -1:
+            print(f"[CLI] Vehicle '{name}' not found.")
+            return
+
+        v = self.usedVehicles[idx]
+
+        # remove JSON file as GUI does
+        json_path = f"./{v.Uuid}.json"
+        if os.path.exists(json_path):
+            os.remove(json_path)
+
+        del self.usedVehicles[idx]
+
+        # reselect similar to GUI
+        if len(self.usedVehicles) > 0:
+            self.selectedVehicle = self.usedVehicles[0]
+            self.selectedVehicleIndex = 0
+        else:
+            self.selectedVehicle = None
+            self.selectedVehicleIndex = -1
+
+        print(f"[CLI] Vehicle '{name}' removed.")
+
+    """
+    Emulates the OnInstallVehicle in GUI
+    """
+    def cmd_spawn(self, veh_name=None, behavior="NORMAL"):
+
+        # -----------------------------------
+        # CASE 1 — spawn selected vehicle
+        # -----------------------------------
+        if veh_name is None:
+            if self.selectedVehicle is None:
+                print("[CLI] ERROR: No vehicle selected. Use 'select_car <name>' or specify a name: spawn <name>")
+                return
+        else:
+            # -----------------------------------
+            # CASE 2 — spawn vehicle by name
+            # -----------------------------------
+            self.selectedVehicle = choose_vehicle(self.usedVehicles, veh_name)
+            if self.selectedVehicle is None:
+                print(f"[CLI] ERROR: Vehicle '{veh_name}' not found in USED vehicles.")
+                print("Use 'cars' to list available used vehicles.")
+                return
+            # update current selection
+
+        print(f"[CLI] Spawning vehicle: {self.selectedVehicle.Name} with behavior {behavior}")
+
+        if self.selectedVehicle.status == 0:
+            ignoreTrafficLights = False
+            ignoreStopSigns = False
+            ignoreVehicles = False
+        # Spawn using internal CARLA service (same as GUI)
+            activethread = self.carlaConnectorService.RunSpawnActorThread(self.selectedVehicle, CarlaActor.Vehicle, 
+                behavior, None,
+                ignoreTrafficLights,
+                ignoreStopSigns,
+                ignoreVehicles)
+            
+            activethread.join()
+
+        print("[CLI] Vehicle spawned successfully.")
+
+    def cmd_ConnectTPU(self):
+        self.onPredictionUnitConnectClick()
+
+
+    def cmd_autorun(self):
+        if self.spawned_vehicle is None:
+            print("[CLI] Spawn a vehicle first.")
+            return
+        print("[CLI] Starting autorun...")
+        th = self.service.RunStartVehicleThread()
+        th.join()
+        print("[CLI] Autorun started.")
+
+    def cmd_stop(self):
+        print("[CLI] Stopping autorun...")
+        self.service.StopAutoRunning()
+        print("[CLI] Stopped.")
+
+    def cmd_quit(self):
+        print("[CLI] Exiting...")
+        self.service.StopThreads()
+        exit(0)
+
+    # ------------------------------------------------------
+    # Interactive loop
+    # ------------------------------------------------------
+
+    def run(self):
+        print("==========================================")
+        print("     CARLA HEADLESS INTERACTIVE CLI")
+        print("==========================================")
+        print("Commands:")
+        print("   connect")
+        print("   disconnect")
+        print("   load <map_name>")
+        print("   maps")
+        print("   cars")
+        print("   show_selected_car")
+        print("   show_sensors_selected_car")
+        print("   select_car <vehicle_name>")
+        print("   add_car <vehicle_name> WIP")
+        print("   remove_car <vehicle_name> WIP")
+        print("   spawn <vehicle_name> [behavior]")
+        print("   connect_tpu")
+        print("   autorun")
+        print("   stop")
+        print("   quit")
+        print("==========================================")
+
+
+        print("[CLI] Automatically connecting to CARLA server...")
+        self.cmd_ConnectToCarlaServer()
+        self.cmd_LoadCarlaWorld("Town10HD_Opt")
+        self.cmd_SelectCar("MINI CAR")
+
+        while True:
+            try:
+                cmd = input("> ").strip().split()
+                if not cmd:
+                    continue
+
+                if cmd[0] == "connect":
+                    self.cmd_ConnectToCarlaServer()
+
+                elif cmd[0] == "disconnect":
+                    self.cmd_DisconnectFromCarlaServer()
+
+                elif cmd[0] == "load":
+                    ##retrieve second cli argument as map name
+                    if len(cmd) < 2:
+                        print("Usage: load <map_name>")
+                        print("Using default map: Town10HD_Opt")
+                        self.map = "Town10HD_Opt"
+                    else:
+                        self.map = cmd[1]
+
+                    self.cmd_LoadCarlaWorld(self.map)
+                
+                elif cmd[0] == "maps":
+                    self.cmd_ListAvailableMaps()
+
+                elif cmd[0] == "cars":
+                    self.cmd_Cars()
+
+                elif cmd[0] == "show_selected_car":
+                    self.cmd_ShowSelectedCar()
+
+                elif cmd[0] == "show_sensors_selected_car":
+                    self.cmd_ShowSensorsSelectedCar()
+                
+                elif cmd[0] == "select_car":
+                    if len(cmd) < 2:
+                        print("Usage: select_car <vehicle_name>")
+                    else:
+                        self.cmd_SelectCar(" ".join(cmd[1:]))
+
+                elif cmd[0] == "add_car":
+                    if len(cmd) < 2:
+                        print("Usage: add_car <vehicle_name>")
+                        continue
+                    self.cmd_AddCar(cmd[1])
+
+                elif cmd[0] == "remove_car":
+                    if len(cmd) < 2:
+                        print("Usage: remove_car <vehicle_name>")
+                        continue
+                    self.cmd_RemoveCar(cmd[1])
+
+                elif cmd[0] == "spawn":
+                    if len(cmd) == 1:
+                        self.cmd_spawn()
+                    elif len(cmd) == 2:
+                        self.cmd_spawn(cmd[1])
+                    elif len(cmd) >= 3:
+                        self.cmd_spawn(cmd[1], cmd[2])
+
+                elif cmd[0] == "connect_tpu":
+                    self.cmd_ConnectTPU()
+
+                elif cmd[0] == "autorun":
+                    self.cmd_autorun()
+
+                elif cmd[0] == "stop":
+                    self.cmd_stop()
+
+                elif cmd[0] == "quit":
+                    self.cmd_quit()
+
+                else:
+                    print("Unknown command:", cmd[0])
+
+            except KeyboardInterrupt:
+                print("\n[CLI] Ctrl+C received, shutting down.")
+                self.cmd_quit()
+    
+    def LoadAvailableCars(self, vehicles, description):
+
+        # --- Create displayable own vehicles list
+        self.availableVehicles = list()
+    
+        for vehicle in vehicles:
+
+            svar = ""
+
+            if len(vehicle.tags) > 2:
+                svar = vehicle.tags[2]
+
+            ownVehicle = Vehicle(str(uuid.uuid4()), "", vehicle.tags[1],
+                                svar, "", 
+                                str(vehicle.get_attribute("generation")), 
+                                vehicle.id, 
+                                vehicle.get_attribute("base_type").as_str(),
+                                vehicle.get_attribute("special_type").as_str(),
+                                vehicle.get_attribute("has_lights").as_bool(),
+                                vehicle.get_attribute("has_dynamic_doors").as_bool())
+
+            self.availableVehicles.append(ownVehicle)

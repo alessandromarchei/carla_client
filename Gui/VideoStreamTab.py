@@ -20,7 +20,8 @@ import customtkinter
 from multiprocessing import Process, Queue
 import numpy as np
 import time
-
+import cv2
+import os
 from Gui.VideoSensorThread import VideoSensorThreadItem
 from Gui.ExtraScaleControl import ExtraScaleControlItem
 
@@ -675,17 +676,18 @@ class VideoStreamTabItem(Frame):
     # raw_data: received raw data to be shown in OpenCV window
     # image: image processed by prediction unit
     # ratio: image width/height ratio
-    def onPredictionUnitReplyReceived(self, raw_data, image, ratio):                    
+    def onPredictionUnitReplyReceived(self, prediction_output, frameID = None):
 
         if self.processedImageCVThread is not None:
-            self.processedImageCVThread.current_frame = raw_data
+            self.processedImageCVThread.current_frame = prediction_output
 
-        w = self.processedImagesFrame.winfo_width()
-        h = self.processedImagesFrame.winfo_height()
+        # w = self.processedImagesFrame.winfo_width()
+        # h = self.processedImagesFrame.winfo_height()
+        
 
         #resizedImage = self.ResizeImage(image, w, h, ratio)
 
-        self.processedImage = ImageTk.PhotoImage(image)
+        self.processedImage = ImageTk.PhotoImage(prediction_output)
         #(resizedImage)
 
         self.labelProcessedImagesStream.configure(

@@ -152,6 +152,7 @@ class SpawnedSensorItem(object):
 
             # --- Call received video frame processing on parent GUI level
             if self.onNewVideoFrameIsRecieved is not None:
+                #do nothing in HEADLESS mode
                 self.onNewVideoFrameIsRecieved(self.number, 
                         self.PIL_image, shown_image, self.params, clientFps, averageFps, serverFps)
 
@@ -175,6 +176,7 @@ class SpawnedSensorItem(object):
             # Entry point to send received image for processing
             if self.params.ownSensor.isFront:
                 if self.carlaProcessorService.tpu_Connector is not None:
+                    print("Sending frame from front sensor to TPU...")
                     self.carlaProcessorService.tpu_Connector.sendDataForPrediction(
                         np.ascontiguousarray(shown_image), 
                         self.params.imgWidth, self.params.imgHeight)

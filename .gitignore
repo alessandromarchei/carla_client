@@ -7,3 +7,8 @@ __pycache__/
 *.pyc
 
 *.bat
+
+.vscode/
+
+notes.txt
+carla_tutorial.txt

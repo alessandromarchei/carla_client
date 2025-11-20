@@ -13,7 +13,10 @@ import random
 import asyncio
 import io
 import sys
-
+import os
+import cv2
+import PIL.Image as Image
+import numpy as np
 from numpy import append
 from queue import Queue
 
@@ -47,6 +50,83 @@ from agents.navigation.behavior_agent import BehaviorAgent
 # --- https://github.com/carla-simulator/carla/issues/1268
 
 # --- https://github.com/carla-simulator/carla/issues/4743
+
+
+
+    # ============================================================================
+    #  CARLA SIMULATOR MODES — (general_mode + required_fps) combinations
+    # ----------------------------------------------------------------------------
+    #  The mode is determined by two user settings:
+    #
+    #      carlaServerGeneralMode ∈ {0, 1}
+    #          0 → ASYNCHRONOUS mode requested
+    #          1 → SYNCHRONOUS mode requested
+    #
+    #      carlaServerRequiredFps:
+    #          -1 → variable timestep (CARLA decides dt)
+    #          >0 → fixed timestep = 1 / fps
+    #
+    #   MODE 1 : general_mode = 0 + required_fps = -1
+    #   MODE 2 : general_mode = 0 + required_fps > 0
+    #   MODE 3 : general_mode = 1 + required_fps = -1
+    #   MODE 4 : general_mode = 1 + required_fps > 0
+    #
+    #
+    #  The table below describes EXACTLY what CARLA will do in each mode:
+    #
+    #  ┌───────┬─────────────┬───────────────┬──────────────────────────────┐
+    #  │ MODE  │  sync_mode   │ fixed_delta   │         DESCRIPTION          │
+    #  ├───────┼─────────────┼───────────────┼──────────────────────────────┤
+    #  │   1   │     OFF      │     None      │ **Asynchronous, variable dt**│
+    #  │       │ (real-time)  │ (no FPS cap)  │ - CARLA ticks by itself      │
+    #  │       │              │               │ - Simulator runs as fast     │
+    #  │       │              │               │   as possible                │
+    #  │       │              │               │ - No sync with client        │
+    #  ├───────┼─────────────┼───────────────┼──────────────────────────────┤
+    #  │   2   │     OFF      │ 1 / FPS       │ **Asynchronous, fixed dt**   │
+    #  │       │              │ (fixed FPS)   │ - Simulator *tries* to tick  │
+    #  │       │              │               │   at user FPS in real time   │
+    #  │       │              │               │ - No client sync (no blocking│
+    #  │       │              │               │   on client ack)             │
+    #  ├───────┼─────────────┼───────────────┼──────────────────────────────┤
+    #  │   3   │     ON       │     None      │ **Synchronous, variable dt** │
+    #  │       │              │               │ - World ONLY advances when   │
+    #  │       │              │               │   the client calls world.tick│
+    #  │       │              │               │ - dt varies depending on tick│
+    #  │       │              │               │   frequency                   │
+    #  │       │              │               │ - Deterministic order, but   │
+    #  │       │              │               │   not deterministic timing    │
+    #  ├───────┼─────────────┼───────────────┼──────────────────────────────┤
+    #  │   4   │     ON       │ 1 / FPS       │ **Synchronous, fixed dt**    │
+    #  │       │              │               │ - Full determinism           │
+    #  │       │              │               │ - Every tick = exact dt      │
+    #  │       │              │               │ - Requires `world.tick()`    │
+    #  │       │              │               │ - Compatible with ML/vision  │
+    #  │       │              │               │   pipelines requiring strict │
+    #  │       │              │               │   temporal alignment         │
+    #  └───────┴─────────────┴───────────────┴──────────────────────────────┘
+    #
+    #  Additional notes:
+    #  -----------------
+    #  • Modes 3 and 4 require the simulator to be driven by a dedicated
+    #    synchronous thread (carlaSyncTickThreadExecutor).
+    #
+    #  • The traffic manager ALSO must be set to synchronous mode whenever
+    #    the world runs synchronously.
+    #
+    #  • Mode 4 is the "gold standard" for deterministic simulation:
+    #       same input → same output → ideal for training, replaying, testing.
+    #
+    # ============================================================================
+
+def get_name(obj):
+    if hasattr(obj, "Name"):
+        return obj.Name
+    if hasattr(obj, "name"):
+        return obj.name
+    return "<no name>"
+
+
 
 class CarlaProcessorService_headless(object):
 
@@ -254,7 +334,7 @@ class CarlaProcessorService_headless(object):
                  ignoreStopSigns,
                  ignoreVehicles):
 
-        self.progressWnd = progressWnd
+        # self.progressWnd = progressWnd
 
         self.carlaSpawningActorThread = threading.Thread(target=self.carlaSpawningActorThreadExecutor, 
                                                      daemon=True,
@@ -339,6 +419,7 @@ class CarlaProcessorService_headless(object):
         try:
 
             # --- Load selected city by its name 
+            print("[carla processor] Loading CARLA world: {}".format(self.carlaMap))
             self.carlaWorld = self.carlaClient.load_world(self.carlaMap)
 
             settings = self.carlaWorld.get_settings()
@@ -362,7 +443,10 @@ class CarlaProcessorService_headless(object):
             self.setMode(True)
 
             if self.app_settings.carlaServerUseTrafficManager == True:
-
+                
+                print("[carla processor] Generating traffic: {} vehicles, {} pedestrians".format(
+                    self.app_settings.carlaServerTrafficManagerRequiredVehicles,
+                    self.app_settings.carlaServerTrafficManagerRequiredPedestrians))
                 self.generateTrafficVehicles(self.app_settings.carlaServerTrafficManagerRequiredVehicles)
                 self.generateTrafficPedestrians(self.app_settings.carlaServerTrafficManagerRequiredPedestrians)
 
@@ -377,6 +461,7 @@ class CarlaProcessorService_headless(object):
                     self.carlaTrafficManager.set_hybrid_physics_radius(self.app_settings.hybridModeRadius)
 
             else: 
+                print("[carla processor] Traffic generation is not requested")
                 description = "Traffic generation is not requested"
 
             # --- Set predefined weather conditions ---
@@ -396,6 +481,7 @@ class CarlaProcessorService_headless(object):
                 wetness = float(self.app_settings.wetness),
                 dust_storm = float(self.app_settings.dust_storm))
             
+            print("[carla processor] Setting weather conditions...")
             self.carlaWorld.set_weather(weather)
 
             # --- Create traffic processor manager
@@ -409,7 +495,8 @@ class CarlaProcessorService_headless(object):
             print(e)
 
         if self.onLoadWorldAttemptCompleted is not None:
-
+            
+            #defined inside mainwindow
             self.onLoadWorldAttemptCompleted(result, self.carlaVehicles, error,
                 description)
 
@@ -435,8 +522,10 @@ class CarlaProcessorService_headless(object):
             match actorKind:
                 
                 case CarlaActor.Vehicle:
-
-                    requestedVehicle = self.FindVehicle(actor.BlueprintID)                    
+                    
+                    print("[carla processor] Spawning vehicle: {}".format(get_name(actor)))
+                    requestedVehicle = self.FindVehicle(actor.BlueprintID)
+                    print("[carla processor] Vehicle blueprint ID: {}".format(requestedVehicle.id))
 
                     start_point = random.randint(0, len(self.world_spawn_points) - 1)
 
@@ -446,6 +535,10 @@ class CarlaProcessorService_headless(object):
 
                     #requestedVehicle.set_attribute('role_name', 'hero')
 
+                    #spawning the vehicle
+                    print("[carla processor] Spawning vehicle at location: {} / {} / {}".format(
+                        spawn_point.location.x, spawn_point.location.y, spawn_point.location.z))
+                    
                     vehicle = self.carlaWorld.spawn_actor(
                         requestedVehicle, spawn_point)
 
@@ -459,24 +552,28 @@ class CarlaProcessorService_headless(object):
 
                     #vehicle.set_attribute('role_name', 'autopilot')
 
+                    #inserting vehicle inside spawned vehicles
                     self.spawned_vehicles.append(
                         SpawnedVehicleItem(vehicle, actor, requestedVehicle, behaviorName,
                                            ignoreTrafficLights, ignoreStopSigns, ignoreVehicles))
                 
                     # --- Process spawning vehicle' video cams
-
+                    print("[carla processor] Spawning vehicle video cameras...")
                     for videocam in actor.InstalledVideoCams:
 
                         if self.carlaSpawningActorThreadExecutor(videocam, CarlaActor.VideoCam, None,
                             vehicle, actor, videocam) == False:
+                                print("Error spawning video camera sensor")
                                 break
-
+                        
+                    #go here after recursion, spawning the sensors
                     if self.onActorHasBeenSpawned is not None:
                         self.onActorHasBeenSpawned(result, None, error)
 
                 case CarlaActor.VideoCam:
-
+                    #jump here after spawning the vehicle (recursive)
                     if extraParam is not None:
+                        print("[carla processor] Spawning video camera: {}".format(get_name(actor)))
                         self.spawnVideoSensor(actor, extraParam, extraParam2, True)
 
         except Exception as e:
@@ -535,13 +632,17 @@ class CarlaProcessorService_headless(object):
         while self.stopSyncThreadRequest == False:
 
             try:
-
+                
+                #call the tick, BLOCKING call (internal wait until tick is done) (choose at least 10 fps)
                 self.carlaWorld.tick()
 
                 index = 0
 
                 for sensor in self.activeSensors:
+                    #send new image to the sensor -> eventually to GUI and TPU
                     sensor.OnNewCarlaFrameReceived()
+
+
                     # --- Update autopiloted vehicles 
                     self.updateAutopilotDrivenVehiclesMoving(self.vehicles_under_autopilot, True)
                     index = index + 1
@@ -586,6 +687,7 @@ class CarlaProcessorService_headless(object):
                 if self.app_settings.carlaServerRequiredFps == -1:
                     mode = 3
                 else:
+                    #default used
                     mode = 4
 
         requestSync = False;
@@ -596,17 +698,21 @@ class CarlaProcessorService_headless(object):
 
             match mode:
                 case 1:
+                    # asynchronous mode, no fixed FPS (maximum possible)
                     settings.synchronous_mode = False
                     settings.fixed_delta_seconds = None
                 case 2:
+                    # asynchronous mode, fixed FPS
                     settings.synchronous_mode = False
                     settings.fixed_delta_seconds = 1 / self.app_settings.carlaServerRequiredFps
                     requestSync = True
                 case 3:
+                    # synchronous mode, no fixed FPS (maximum possible) (default)
                     settings.synchronous_mode = True
                     settings.fixed_delta_seconds = None
                     requestSync = True
                 case 4:
+                    # synchronous mode, fixed FPS
                     settings.synchronous_mode = True
                     settings.fixed_delta_seconds = 1 / self.app_settings.carlaServerRequiredFps
                     requestSync = True
@@ -619,7 +725,7 @@ class CarlaProcessorService_headless(object):
                 self.carlaTrafficManager.set_synchronous_mode(requestSync)
 
             if requestSync == True:
-                self.stopSyncThreadRequest = False
+                self.stopSyncThreadRequest = False  #false -> always run the tick executor
                 self.carlaSyncThread = threading.Thread(target=self.carlaSyncTickThreadExecutor, 
                                                      daemon=True)
                 self.carlaSyncThread.start()
@@ -720,15 +826,17 @@ class CarlaProcessorService_headless(object):
     # --- data: received data package
     # --- uuid: sensor receiver UUID    
     def sensor_callback(self, data, uuid): 
-
+        
+        #DATA contains the image, put it into the queue
         if self.check == True:
+            #used for debugging only
             return
 
         self.check = True
 
         index = self.getSpawnedSensorIndex(uuid)
 
-        print("RECEIVED FRAME FOR SENSOR: {}".format(uuid))
+        # print("RECEIVED FRAME FOR SENSOR: {}".format(uuid))
 
         if index != -1:
             self.activeSensors[index].frames_queue.put((data, uuid))
@@ -1197,20 +1305,22 @@ class CarlaProcessorService_headless(object):
     # --- host: prediction device address (Dns name)
     # --- port: prediction device port
     # --- Enter after the ConnectTPU button is pressed
-    def ConnectTPU(self, host, port):
+    def ConnectTPU(self):
 
-        print("[carla processor] Connecting to TPU: {}:{}".format(host, port))
-        self.tpu_Connector = PredictionUnitConnector(self)
+        print("[carla processor] Starting server for TPU TX port: {}:{}".format("127.0.0.1", "8080"))
+        print("[carla processor] Starting server for TPU RX port: {}:{}".format("127.0.0.1", "8081"))
+        self.tpu_Connector = PredictionUnitConnector(self)  #pass carla processor reference, so we can call the callback function from internally
 
         if self.onPredictionUnitConnectionAttemptCompleted is not None:
-            if self.tpu_Connector.connect(host, port) == True:
-                print("[carla processor] Connected to TPU: {}:{}".format(host, port))
+            if self.tpu_Connector.connect() == True:
+                #TODO return a flag for successful connection, not only attempt = successful
+                print("[carla processor] Started server for connection to TPU TX and RX ports")
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = self.tpu_Connector
                 self.onPredictionUnitConnectionAttemptCompleted(True)
-                print("[carla processor] TPU connection attempt completed")
+                print("[carla processor] TPU server connection attempt completed")
             else:
-                print("[carla processor] Failed to connect to TPU: {}:{}".format(host, port))
+                print("[carla processor] Failed to start server for connection to TPU TX and RX ports")
                 self.onPredictionUnitConnectionAttemptCompleted(False)
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = None
@@ -1293,6 +1403,7 @@ class CarlaProcessorService_headless(object):
 
         blueprint.set_attribute('ros_name', actor.name)
 
+        #spawning the sensor and attaching it to the vehicle.
         spawnedSensor = self.carlaWorld.spawn_actor(
             blueprint, transform, parentCarlaObj)
 
@@ -1317,6 +1428,10 @@ class CarlaProcessorService_headless(object):
         if self.app_settings.carlaServerGeneralMode == 0:
             spawnedSensor.listen(lambda data: spawned_sensor_item.OnNewCarlaFrameReceived(data, actor.Uuid))
         else:
+            #default : go to sensor_callback 
+            # print("SENSOR LISTENING TO DISK")
+            # spawnedSensor.listen(lambda image: image.save_to_disk('out/%06d.png' % image.frame))
+            
             spawnedSensor.listen(lambda data: self.sensor_callback(data, actor.Uuid))
 
         return spawnedSensor
@@ -1340,9 +1455,14 @@ class CarlaProcessorService_headless(object):
                 
     # --- Prediction unit reply is received
     # processedImage: image processed by prediction unit
-    def PredictionUnitReplyReceived(self, raw_data, processedImage, ratio):
+    def PredictionUnitReplyReceived(self, output_prediction, frameID):
         if self.onPredictionUnitReplyReceived is not None:
-            self.onPredictionUnitReplyReceived(raw_data, processedImage, ratio)
+            #execute the function inside VideoStreamTab.py (function declared there)
+            self.onPredictionUnitReplyReceived(output_prediction, frameID)
+        else:
+            #headless mode
+            self.savePredictionUnitReply(output_prediction, frameID)
+            
 
     # --- Get spawn point which is closest to provided one
     # position: point to be checked
@@ -1441,4 +1561,30 @@ class CarlaProcessorService_headless(object):
             if self.OnTopDownImageReceived is not None:
                 self.OnTopDownImageReceived(data)
 
+
+    def savePredictionUnitReply(self, output_prediction, frameID):
+        #receive image already segmented : input + mask is applied inside the prediction unit  
+
+        #for debugging, save the image into .png format               
+        os.makedirs("output_segmented", exist_ok=True)
+
+        # Autoincremental filename
+        if not hasattr(self, "_debug_save_counter"):
+            self._debug_save_counter = 0
+
+        print("Saving segmented image frame #{}".format(frameID))
+        self._debug_save_counter += 1
+        filename = f"output_segmented/frame_{self._debug_save_counter:05d}.png"
+        # CASE 1 — NumPy array (RGB or BGR)
+        if isinstance(output_prediction, np.ndarray):
+            # If RGB → convert to BGR for OpenCV
+            if output_prediction.shape[2] == 3:
+                img_bgr = cv2.cvtColor(output_prediction, cv2.COLOR_RGB2BGR)
+            else:
+                img_bgr = output_prediction
+            cv2.imwrite(filename, img_bgr)
+        
+        # CASE 2 — PIL Image
+        elif isinstance(output_prediction, Image.Image):
+            output_prediction.save(filename)
     # ===============================================

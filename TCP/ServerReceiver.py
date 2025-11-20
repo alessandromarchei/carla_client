@@ -116,7 +116,6 @@ class ServerReceiver(ServerBase):
             # ---- Store matched result ----
             with self.lock:
                 self.ready[frame_id] = (original, mask)
-
         print(f"{self.name} Stopped.")
 
 
