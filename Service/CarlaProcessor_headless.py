@@ -1305,14 +1305,14 @@ class CarlaProcessorService_headless(object):
     # --- host: prediction device address (Dns name)
     # --- port: prediction device port
     # --- Enter after the ConnectTPU button is pressed
-    def ConnectTPU(self):
+    def ConnectTPU(self, tx_port, rx_port):
 
         print("[carla processor] Starting server for TPU TX port: {}:{}".format("127.0.0.1", "8080"))
         print("[carla processor] Starting server for TPU RX port: {}:{}".format("127.0.0.1", "8081"))
         self.tpu_Connector = PredictionUnitConnector(self)  #pass carla processor reference, so we can call the callback function from internally
 
         if self.onPredictionUnitConnectionAttemptCompleted is not None:
-            if self.tpu_Connector.connect() == True:
+            if self.tpu_Connector.connect(tx_port, rx_port) == True:
                 #TODO return a flag for successful connection, not only attempt = successful
                 print("[carla processor] Started server for connection to TPU TX and RX ports")
                 for sensor in self.activeSensors:

@@ -36,7 +36,7 @@ class PredictionUnitConnector(object):
     # ----------------------------------------------------------
     # CONNECT
     # ----------------------------------------------------------
-    def connect(self, tx_port=DEFAULT_TX_PORT, rx_port=DEFAULT_RX_PORT):
+    def connect(self):
         print("[PU Connector] Connecting...")
 
         try:
@@ -46,7 +46,7 @@ class PredictionUnitConnector(object):
 
             # Create sender (async)
             self.sender = ServerSender(
-                port=tx_port,
+                port=DEFAULT_TX_PORT,
                 input_queue=self.sender_queue,
                 sent_queue=self.matching_queue,
                 input_folder=None,  # CARLA always push frames
@@ -55,7 +55,7 @@ class PredictionUnitConnector(object):
 
             # Create receiver (async)
             self.receiver = ServerReceiver(
-                port=rx_port,
+                port=DEFAULT_RX_PORT,
                 input_queue=self.matching_queue
             )
 
@@ -207,23 +207,18 @@ class PredictionUnitConnector(object):
         shape = prediction.shape
         vis_predict_object = np.zeros((shape[0], shape[1], 3), dtype="uint8")
 
-    # ------------------------------------------------------
-        # Light blue background (BGR)
-        # ------------------------------------------------------
-        vis_predict_object[:, :, :] = (255, 100, 0)
+        # Default background → orange
+        vis_predict_object[:, :, 0] = 255
+        vis_predict_object[:, :, 1] = 93
+        vis_predict_object[:, :, 2] = 61
 
-        # ------------------------------------------------------
-        # Class 1 → Purple (BGR)
-        # ------------------------------------------------------
+        # Class 1 (object) → purple
         fg = np.where(prediction == 1)
-        vis_predict_object[fg[0], fg[1], :] = (255, 28, 145)
+        vis_predict_object[fg[0], fg[1], :] = (145, 28, 255)
 
-        # ------------------------------------------------------
-        # Class 2 → Green (BGR)
-        # ------------------------------------------------------
+        # Class 2 (road/drivable surface) → green
         road = np.where(prediction == 2)
         vis_predict_object[road[0], road[1], :] = (0, 255, 0)
-
 
         return vis_predict_object
 

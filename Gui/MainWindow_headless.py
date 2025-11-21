@@ -278,7 +278,8 @@ class MainWindow_headless(object):
         self.urlVCU = self.app_settings.vehicleControlUnitAddress
         self.portVCU = self.app_settings.vehicleControlUnitPort
         self.urlPSU = self.app_settings.predictionUnitAddress
-        self.portPSU = self.app_settings.predictionUnitPort
+        self.portPSU_TX = self.app_settings.predictionUnit_TXPort
+        self.portPSU_RX = self.app_settings.predictionUnit_RXPort
 
         #gui dependencies removed
         # urlFrame = Frame(connectionCommonFrame, background='lightsteelblue')
@@ -1462,7 +1463,8 @@ class MainWindow_headless(object):
         self.app_settings.vehicleControlUnitPort = self.portVCU
 
         self.app_settings.predictionUnitAddress = self.urlPSU
-        self.app_settings.predictionUnitPort = self.portPSU
+        self.app_settings.predictionUnit_TXPort = self.portPSU_TX
+        self.app_settings.predictionUnit_RXPort = self.portPSU_RX
 
         self.app_settings.serialize(True)
   
