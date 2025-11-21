@@ -1,5 +1,5 @@
 {
-    "path": "configs/carla/settings_2.json",
+    "path": "configs/carla/settings.json",
     "carlaServerUrl": "127.0.0.1",
     "carlaServerMainPort": 2000,
     "carlaServerTrafficManagerPort": 2080,
@@ -30,5 +30,6 @@
     "vehicleControlUnitAddress": "127.0.0.1",
     "vehicleControlUnitPort": 3333,
     "predictionUnitAddress": "127.0.0.1",
-    "predictionUnitPort": 4444
+    "predictionUnit_TXPort": 8080,
+    "predictionUnit_RXPort": 8081
 }

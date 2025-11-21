@@ -90,7 +90,7 @@ def main():
             cv2.waitKey(1)
 
         if args.save:
-            overlay = add_mask_segmentation(img, mask, alpha=0.5)
+            overlay = add_mask_segmentation(img, mask, alpha=1.0)
             out = np.vstack([img, overlay])
             cv2.imwrite(f"result_{f_id}.png", out)
 

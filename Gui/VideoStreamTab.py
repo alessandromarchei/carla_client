@@ -685,9 +685,11 @@ class VideoStreamTabItem(Frame):
         # h = self.processedImagesFrame.winfo_height()
         
 
-        #resizedImage = self.ResizeImage(image, w, h, ratio)
+        # Convert to pil image and RGB for display 
+        prediction_output_rgb = cv2.cvtColor(prediction_output, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(prediction_output_rgb)
 
-        self.processedImage = ImageTk.PhotoImage(prediction_output)
+        self.processedImage = ImageTk.PhotoImage(pil_img)
         #(resizedImage)
 
         self.labelProcessedImagesStream.configure(

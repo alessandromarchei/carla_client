@@ -36,7 +36,7 @@ class PredictionUnitConnector(object):
     # ----------------------------------------------------------
     # CONNECT
     # ----------------------------------------------------------
-    def connect(self):
+    def connect(self, tx_port=DEFAULT_TX_PORT, rx_port=DEFAULT_RX_PORT):
         print("[PU Connector] Connecting...")
 
         try:
@@ -46,7 +46,7 @@ class PredictionUnitConnector(object):
 
             # Create sender (async)
             self.sender = ServerSender(
-                port=DEFAULT_TX_PORT,
+                port=tx_port,
                 input_queue=self.sender_queue,
                 sent_queue=self.matching_queue,
                 input_folder=None,  # CARLA always push frames
@@ -55,7 +55,7 @@ class PredictionUnitConnector(object):
 
             # Create receiver (async)
             self.receiver = ServerReceiver(
-                port=DEFAULT_RX_PORT,
+                port=rx_port,
                 input_queue=self.matching_queue
             )
 
@@ -138,31 +138,6 @@ class PredictionUnitConnector(object):
         self.sender.sendDataForPrediction(img, frame_id)
         return True
 
-    # ----------------------------------------------------------
-    # RECEIVE DATA FROM PREDICTION (Receiver → CARLA)
-    # ----------------------------------------------------------
-    def receiveDataFromPrediction(self, frame_id=None):
-        """
-        Call this function from external by CARLA code to retrieve matched results.
-
-        - If frame_id provided -> return that pair if available
-        - Else -> return latest (frame, mask) pair
-        """
-
-        if self.receiver is None:
-            print("[PU Connector] ERROR: Receiver not running")
-            return None
-
-        print("[PU Connector] DATA: Receiver not running")
-
-        result = self.receiver.receiveDataFromPrediction(frame_id)
-
-        if result is None:
-            return None
-
-        frame, mask = result  # unpack the tuple into the mask and hte raw frame
-        return frame, mask
-
 # ----------------------------------------------------------
     # ASYNCHRONOUS RECEIVER LOOP (ADDED)
     # ----------------------------------------------------------
@@ -192,7 +167,9 @@ class PredictionUnitConnector(object):
             input_image = input_data["img"]
             
             #prepare the sceneseg visualization
-            output_image = self.add_mask_segmentation(input_image, mask, alpha=0.5)
+            output_image = self.add_mask_segmentation(input_image, mask, alpha=1.0)
+
+            output_image = np.vstack([input_image, output_image])
 
             # Safety: ensure CarlaProcessor exists
             if self.carlaServiceConnector is None:
@@ -230,18 +207,23 @@ class PredictionUnitConnector(object):
         shape = prediction.shape
         vis_predict_object = np.zeros((shape[0], shape[1], 3), dtype="uint8")
 
-        # Default background → orange
-        vis_predict_object[:, :, 0] = 255
-        vis_predict_object[:, :, 1] = 93
-        vis_predict_object[:, :, 2] = 61
+    # ------------------------------------------------------
+        # Light blue background (BGR)
+        # ------------------------------------------------------
+        vis_predict_object[:, :, :] = (255, 100, 0)
 
-        # Class 1 (object) → purple
+        # ------------------------------------------------------
+        # Class 1 → Purple (BGR)
+        # ------------------------------------------------------
         fg = np.where(prediction == 1)
-        vis_predict_object[fg[0], fg[1], :] = (145, 28, 255)
+        vis_predict_object[fg[0], fg[1], :] = (255, 28, 145)
 
-        # Class 2 (road/drivable surface) → green
+        # ------------------------------------------------------
+        # Class 2 → Green (BGR)
+        # ------------------------------------------------------
         road = np.where(prediction == 2)
         vis_predict_object[road[0], road[1], :] = (0, 255, 0)
+
 
         return vis_predict_object
 

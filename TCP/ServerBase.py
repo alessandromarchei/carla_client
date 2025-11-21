@@ -15,7 +15,7 @@ class ServerBase:
         self.name = "[ServerBase]"
 
     def _reset_client(self):
-        """Chiude il client corrente e lo azzera."""
+        """Close the current client and reset it."""
         if self.client_sock:
             try:
                 self.client_sock.shutdown(socket.SHUT_RDWR)
@@ -29,8 +29,8 @@ class ServerBase:
 
     def acceptClient(self):
         """
-        Prova ad accettare un client.
-        NON è bloccante per sempre: se fallisce, ritorna False.
+        Try to accept a client.
+        It is NOT blocking forever: if it fails, it returns False.
         """
         try:
             self.client_sock, addr = self.sock.accept()
@@ -41,12 +41,12 @@ class ServerBase:
             return False
 
     # ------------------------------------------
-    # startServer() — bind & listen una sola volta
+    # startServer() — bind & listen only once
     # ------------------------------------------
     def startServer(self):
         """
-        Crea il listening socket.
-        NON chiama accept: quello lo fa acceptClient() dentro run().
+        Create the listening socket.
+        Does NOT call accept: that is done by acceptClient() inside run().
         """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -73,10 +73,10 @@ class ServerBase:
         print(f"{self.name} Stopping base server on port {self.port}...")
         self.running = False
 
-        # chiudo client
+        # reset client
         self._reset_client()
 
-        # chiudo server socket
+        # close server socket
         try:
             if self.sock:
                 self.sock.close()
@@ -87,6 +87,6 @@ class ServerBase:
         if self.worker and self.worker.is_alive():
             self.worker.join()
 
-    # da implementare nelle derivate
+    # virtual only here
     def run(self):
         raise NotImplementedError

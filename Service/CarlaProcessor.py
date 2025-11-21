@@ -1193,13 +1193,13 @@ class CarlaProcessorService(object):
     # --- host: prediction device address (Dns name)
     # --- port: prediction device port
     # --- Enter after the ConnectTPU button is pressed
-    def ConnectTPU(self, host, port):
+    def ConnectTPU(self, tx_port, rx_port):
 
-        print("Connecting to TPU: {}:{}".format(host, port))
+        print("Starting TPU connection...")
         self.tpu_Connector = PredictionUnitConnector(self)
 
         if self.onPredictionUnitConnectionAttemptCompleted is not None:
-            if self.tpu_Connector.connect() == True:
+            if self.tpu_Connector.connect(tx_port, rx_port) == True:
                 #print("Connected to TPU: {}:{}".format(host, port))
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = self.tpu_Connector
@@ -1336,9 +1336,9 @@ class CarlaProcessorService(object):
                 
     # --- Prediction unit reply is received
     # processedImage: image processed by prediction unit
-    def PredictionUnitReplyReceived(self, raw_data, processedImage, ratio):
+    def PredictionUnitReplyReceived(self, output_prediction, frameID):
         if self.onPredictionUnitReplyReceived is not None:
-            self.onPredictionUnitReplyReceived(raw_data, processedImage, ratio)
+            self.onPredictionUnitReplyReceived(output_prediction, frameID)
 
     # --- Get spawn point which is closest to provided one
     # position: point to be checked
