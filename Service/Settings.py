@@ -33,8 +33,8 @@ class Settings_Set(object):
     # --- (0 - asynchronous, 1 - synchronous)
     carlaServerGeneralMode = 0
 
-    # --- Remote Carla server required max FPS
-    carlaServerRequiredFps = -1
+    # --- Remote Carla server required at 10 fps (minimum, to reduce latency)
+    carlaServerRequiredFps = 10
 
     # --- Max allowed frames queue size before recreation
     maxFramesQueueSize = 50
@@ -108,10 +108,11 @@ class Settings_Set(object):
     vehicleControlUnitPort = 3333
 
     # --- Prediction unit address (Dns name)
-    predictionUnitAddress = "192.168.1.14"
+    predictionUnitAddress = "127.0.0.1"
          
     # --- Prediction unit port
-    predictionUnitPort = 1477
+    predictionUnit_TXPort = 8080
+    predictionUnit_RXPort = 8081
 
     # ----------------------------------
 
@@ -138,7 +139,7 @@ class Settings_Set(object):
                  carlaServerTrafficManagerPort = 2001,
                  carlaServerConnectionTimeout = 25,
                  carlaServerGeneralMode = 0,
-                 carlaServerRequiredFps = -1,
+                 carlaServerRequiredFps = 10,
                  maxFramesQueueSize = 50,
                  queueGetActionTimeout = 10,
                  carlaServerUseTrafficManager = False,
@@ -162,8 +163,9 @@ class Settings_Set(object):
                  hybridModeRadius = 50,
                  vehicleControlUnitAddress = "192.168.50.1",
                  vehicleControlUnitPort = 3333,
-                 predictionUnitAddress = "192.168.50.1",
-                 predictionUnitPort = 1477):
+                 predictionUnitAddress = "127.0.0.1",
+                 predictionUnit_TXPort = 8080,
+                 predictionUnit_RXPort = 8081):
         
         self.path = path
         self.carlaServerUrl = carlaServerUrl 
@@ -196,7 +198,8 @@ class Settings_Set(object):
         self.vehicleControlUnitAddress = vehicleControlUnitAddress
         self.vehicleControlUnitPort = vehicleControlUnitPort
         self.predictionUnitAddress = predictionUnitAddress
-        self.predictionUnitPort = predictionUnitPort
+        self.predictionUnit_TXPort = predictionUnit_TXPort
+        self.predictionUnit_RXPort = predictionUnit_RXPort
 
     #-----------------------
     #--- Public methods  ---
@@ -250,7 +253,8 @@ class Settings_Set(object):
                 self.vehicleControlUnitPort = decoded.vehicleControlUnitPort
 
                 self.predictionUnitAddress = decoded.predictionUnitAddress
-                self.predictionUnitPort = decoded.predictionUnitPort
+                self.predictionUnit_TXPort = decoded.predictionUnit_TXPort
+                self.predictionUnit_RXPort = decoded.predictionUnit_RXPort
 
                 return True
         
