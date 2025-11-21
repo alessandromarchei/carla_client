@@ -1,14 +1,12 @@
 # TCP/ServerReceiver.py
 
-from .ServerBase import ServerBase
+from .ServerBase import ServerBase, print_metadata_py
 from .Buffer import BlockingQueue
+from Service.Enumerations import DataType, ImageModality, dtype_map
 import struct
 import numpy as np
 import threading
 import time
-
-HEADER_FMT = "!IIII"  # frame_id, height, width, channels
-HEADER_SIZE = struct.calcsize(HEADER_FMT)
 
 
 class ServerReceiver(ServerBase):
@@ -20,7 +18,7 @@ class ServerReceiver(ServerBase):
     - Provides receiveDataFromPrediction()
     """
 
-    def __init__(self, port, input_queue: BlockingQueue):
+    def __init__(self, port, input_queue: BlockingQueue, header_fmt="!IIIIIII"):
         super().__init__(port)
         self.input_queue = input_queue
 
@@ -30,6 +28,9 @@ class ServerReceiver(ServerBase):
 
         #overwrite the self.name
         self.name = "[Receiver]"
+
+        self.header_fmt = header_fmt
+        self.header_size = struct.calcsize(self.header_fmt)
 
     # -----------------------------------------------
     # Safe recv-all with disconnect detection
@@ -72,25 +73,33 @@ class ServerReceiver(ServerBase):
                 continue
 
             # ---- Try receive header ----
-            metadata = self.recvall(HEADER_SIZE)
+            metadata = self.recvall(self.header_size)
 
             # Connection lost or incomplete header
             if not metadata:
                 print(f"{self.name} Client disconnected.")
                 self._reset_client()
                 continue
+            
+            # print_metadata_py(metadata, "SERVER RECEIVED METADATA (FROM CLIENT)")
+
 
             try:
-                frame_id, H, W, C = struct.unpack(HEADER_FMT, metadata)
+                # frame_id, height, width, channels, dtype, total_bytes, mode
+                frame_id, H, W, C, dtype, total_bytes, mode = struct.unpack(self.header_fmt, metadata)
+
+                dtype_enum = DataType(dtype)
+                mode_enum = ImageModality(mode)
+
+                print(f"{self.name} RECEIVING frame {frame_id} "
+                      f"({H}x{W}x{C}, {dtype_enum.name}, {total_bytes} bytes, mode={mode_enum.name})")
             except:
                 print(f"{self.name} Header unpack error.")
                 self._reset_client()
                 continue
 
-            payload_size = H * W * C
-
             # ---- Receive payload ----
-            payload = self.recvall(payload_size)
+            payload = self.recvall(total_bytes)
 
             if payload is None:
                 print(f"{self.name} Payload receive failed. Client disconnected?")
@@ -98,7 +107,9 @@ class ServerReceiver(ServerBase):
                 continue
 
             try:
-                mask = np.frombuffer(payload, dtype=np.uint8).reshape((H, W, C))
+                print(f"{self.name} Payload received: {len(payload)} bytes")
+                np_dtype = dtype_map[dtype_enum]
+                mask = np.frombuffer(payload, dtype=np_dtype).reshape((H, W, C))
             except ValueError:
                 print(f"{self.name} Payload reshape error.")
                 self._reset_client()
@@ -115,7 +126,7 @@ class ServerReceiver(ServerBase):
 
             # ---- Store matched result ----
             with self.lock:
-                self.ready[frame_id] = (original, mask)
+                self.ready[frame_id] = (original, mask, mode_enum)
         print(f"{self.name} Stopped.")
 
 

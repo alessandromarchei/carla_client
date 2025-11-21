@@ -1336,9 +1336,9 @@ class CarlaProcessorService(object):
                 
     # --- Prediction unit reply is received
     # processedImage: image processed by prediction unit
-    def PredictionUnitReplyReceived(self, output_prediction, frameID):
+    def PredictionUnitReplyReceived(self, frameID, output_prediction, mode):
         if self.onPredictionUnitReplyReceived is not None:
-            self.onPredictionUnitReplyReceived(output_prediction, frameID)
+            self.onPredictionUnitReplyReceived(frameID, output_prediction, mode)
 
     # --- Get spawn point which is closest to provided one
     # position: point to be checked

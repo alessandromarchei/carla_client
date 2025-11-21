@@ -222,9 +222,6 @@ class MainWindow(object):
         self.configureGUI()
 
         #connect to carla directly : equivalent of pressing the connectcarla button`
-        # #wait a bit to let the gui load
-        # print("Waiting 5 seconds before connecting to CARLA")
-        # time.sleep(5)
         # self.onConnectClick()
 
         self.rootWnd.mainloop()

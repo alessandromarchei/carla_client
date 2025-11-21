@@ -9,10 +9,27 @@ import os
 import numpy as np
 from PIL import Image
 import cmapy
+import struct
+from Service.Enumerations import DataType, ImageModality
+
+
+"""
+This PU block takes as input the raw images from CARLA engine (carla processor service) and:
+    - 1) converts into good format if needed
+    - 2) prepares metatada to send to the TX 
+    - 3) sends to the prediction unit via TCP sender
+    - 4) receives the prediction results from the RX TCP receiver
+    - 5) applies postprocessing (visualization) to the output, based on the model type received
+"""
 
 DEFAULT_TX_PORT = 8080
 DEFAULT_RX_PORT = 8081
-DEFAULT_TX_RATE = 10.0
+
+
+#sender metadata (all 32 bits unsigned int)
+HEADER_FMT_TX = "<IIIIIII"   # frame_id, height, width, channels, dtype, total_bytes, mode
+HEADER_FMT_RX = "<IIIIIII"  # frame_id, height, width, channels, dtype, total_bytes, mode
+
 
 class PredictionUnitConnector(object):
 
@@ -47,14 +64,13 @@ class PredictionUnitConnector(object):
                 port=tx_port,
                 input_queue=self.sender_queue,
                 sent_queue=self.matching_queue,
-                input_folder=None,  # CARLA always push frames
-                fps=DEFAULT_TX_RATE,
             )
 
             # Create receiver (async)
             self.receiver = ServerReceiver(
                 port=rx_port,
-                input_queue=self.matching_queue
+                input_queue=self.matching_queue,
+                header_fmt=HEADER_FMT_RX,   #specific header format for RX in constructor
             )
 
             # Start background TCP threads
@@ -111,12 +127,12 @@ class PredictionUnitConnector(object):
     # ----------------------------------------------------------
     # SEND DATA FOR PREDICTION (CARLA → Sender)
     # ----------------------------------------------------------
-    def sendDataForPrediction(self, img, imgWidth=None, imgHeight=None):
+    def sendDataForPrediction(self, img):
         """
         Called by CARLA sensor pipeline.
 
         Works asynchronously:
-        - Increments frame_id
+        - create metadata from image
         - Pushes dict into sender_queue
         - Actual TCP sending happens asynchronously in ServerSender.run()
         """
@@ -125,15 +141,21 @@ class PredictionUnitConnector(object):
             print("[PU Connector] ERROR: Sender not running")
             return False
 
-        self.sender_framecounter += 1
-        frame_id = self.sender_framecounter
-
         #convert the image to 3 BGR channel in case it is RGBA
         #BGR -> RGB is done by the model directly
         img = self.bgra_to_bgr(img)
 
+        #create metadata
+        metadata = self.prepare_metadata(img)
+
+        #put all together
+        data = {
+            "img": img,
+            "metadata": metadata
+        }
+
         # push into sender queue
-        self.sender.sendDataForPrediction(img, frame_id)
+        self.sender.sendDataForPrediction(data)
         return True
 
 # ----------------------------------------------------------
@@ -158,14 +180,22 @@ class PredictionUnitConnector(object):
                 time.sleep(0.01)
                 continue
 
-            # unpack the result = input_data, mask
-            input_data, mask = result
+            # unpack the result = input_data, output_prediction, mode
+            input_data, output_prediction, mode = result
 
-            frameID = input_data["frame_id"]
+            frame_id = struct.unpack("<I", input_data["metadata"][:4])[0]
             input_image = input_data["img"]
             
-            #prepare the sceneseg visualization
-            output_image = self.add_mask_segmentation(input_image, mask, alpha=1.0)
+            #prepare the postprocessed output based on mode
+            if mode == ImageModality.SEGMENTATION:
+                print(f"[PU Connector] Processing segmentation output for frame {frame_id}")
+                output_image = self.add_mask_segmentation(input_image, output_prediction, alpha=1.0)
+            elif mode == ImageModality.DEPTH:
+                print(f"[PU Connector] Processing depth output for frame {frame_id}")
+                output_image = self.visualize_scene3d(input_image, output_prediction, alpha=0.7)
+            else:
+                print(f"[PU Connector] WARNING: Unknown ImageModality {mode}, passing raw prediction")
+                output_image = output_prediction
 
             output_image = np.vstack([input_image, output_image])
 
@@ -177,7 +207,7 @@ class PredictionUnitConnector(object):
             # Call the CarlaProcessor internal callback
             try:
                 # print("[PU Connector] Calling PredictionUnitReplyReceived callback")
-                self.carlaServiceConnector.PredictionUnitReplyReceived(output_image, frameID)
+                self.carlaServiceConnector.PredictionUnitReplyReceived(frame_id, output_image, mode)
             except Exception as e:
                 print(f"[PU Connector] Error in callback: {e}")
 
@@ -192,6 +222,46 @@ class PredictionUnitConnector(object):
         
         return bgr_image
 
+    ############################
+    #  utils
+    ############################
+
+    def prepare_metadata(self, image):
+        """
+        Prepare metadata for sending image to prediction unit.
+        Metadata format: frame_id, height, width, channels, dtype, total bytes
+        """
+        H, W = image.shape[:2]
+        C = image.shape[2] if image.ndim == 3 else 1
+
+        # Determine dtype code
+        if image.dtype == np.uint8:
+            dtype = DataType.UINT8.value
+        elif image.dtype == np.float32:
+            dtype = DataType.FLOAT32.value
+        else:
+            raise ValueError("Unsupported image dtype")
+
+        total_bytes = image.nbytes
+
+        metadata = struct.pack(
+            HEADER_FMT_TX,
+            self.sender_framecounter,
+            H,
+            W,
+            C,
+            dtype,
+            total_bytes,
+            ImageModality.INPUT.value
+        )
+
+        print(f"[PU Connector] Prepared metadata: frame_id={self.sender_framecounter}, "
+              f"size=({H}x{W}x{C}), dtype={dtype}, total_bytes={total_bytes}")
+
+        #increment sender framecounter
+        self.sender_framecounter += 1
+
+        return metadata
 
     ############################
     #   VISUALIZATION utils

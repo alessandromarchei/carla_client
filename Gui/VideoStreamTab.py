@@ -676,17 +676,19 @@ class VideoStreamTabItem(Frame):
     # raw_data: received raw data to be shown in OpenCV window
     # image: image processed by prediction unit
     # ratio: image width/height ratio
-    def onPredictionUnitReplyReceived(self, prediction_output, frameID = None):
+
+    #TODO: use N windows, dependng on the amout of different modes received at runtime (see VideoStreamTab_new.py)
+    def onPredictionUnitReplyReceived(self, frameID, output_prediction, mode):
 
         if self.processedImageCVThread is not None:
-            self.processedImageCVThread.current_frame = prediction_output
+            self.processedImageCVThread.current_frame = output_prediction
 
         # w = self.processedImagesFrame.winfo_width()
         # h = self.processedImagesFrame.winfo_height()
         
 
         # Convert to pil image and RGB for display 
-        prediction_output_rgb = cv2.cvtColor(prediction_output, cv2.COLOR_BGR2RGB)
+        prediction_output_rgb = cv2.cvtColor(output_prediction, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(prediction_output_rgb)
 
         self.processedImage = ImageTk.PhotoImage(pil_img)

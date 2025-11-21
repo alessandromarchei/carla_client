@@ -3,6 +3,22 @@
 import socket
 import threading
 
+def print_metadata_py(raw, title):
+    print("\n===== {} =====".format(title))
+    print("Raw length:", len(raw))
+
+    fields = ["frame_id", "height", "width", "channels", "dtype", "total_bytes", "mode"]
+
+    for i, name in enumerate(fields):
+        start = 4 * i
+        end = start + 4
+        chunk = raw[start:end]
+        hex_str = " ".join(f"{b:02X}" for b in chunk)
+        print(f"{name:12}: {hex_str}")
+
+    print("==============================\n")
+
+
 
 class ServerBase:
     def __init__(self, port):
