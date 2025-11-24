@@ -3,6 +3,7 @@
 import socket
 import threading
 
+#helper used for debugging only
 def print_metadata_py(raw, title):
     print("\n===== {} =====".format(title))
     print("Raw length:", len(raw))
@@ -57,12 +58,11 @@ class ServerBase:
             return False
 
     # ------------------------------------------
-    # startServer() — bind & listen only once
+    # startServer() — bind and listen only once
     # ------------------------------------------
     def startServer(self):
         """
         Create the listening socket.
-        Does NOT call accept: that is done by acceptClient() inside run().
         """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

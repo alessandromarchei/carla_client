@@ -1,5 +1,3 @@
-# TCP/ServerReceiver.py
-
 from .ServerBase import ServerBase, print_metadata_py
 from .Buffer import BlockingQueue
 from Service.Enumerations import DataType, ImageModality, dtype_map
@@ -11,11 +9,11 @@ import time
 
 class ServerReceiver(ServerBase):
     """
-    TCP receiver (robust version)
+    TCP receiver. It receives predictions from the client, running the AI models
     - Receives (frame_id, H, W, C, payload)
     - Matches with original frame from sender_queue
     - Stores finished results internally
-    - Provides receiveDataFromPrediction()
+    - Provides receiveDataFromPrediction() containing output data, to be read from outside
     """
 
     def __init__(self, port, input_queue: BlockingQueue, header_fmt="!IIIIIII"):
@@ -66,7 +64,7 @@ class ServerReceiver(ServerBase):
 
         while self.running:
 
-            # ---- No client connected? Try accepting ----
+            # ---- If no client is connected,try accepting ----
             if self.client_sock is None:
                 self.acceptClient()
                 time.sleep(0.05)
@@ -98,7 +96,7 @@ class ServerReceiver(ServerBase):
                 self._reset_client()
                 continue
 
-            # ---- Receive payload ----
+            # ---- Receive payload (raw image) ----
             payload = self.recvall(total_bytes)
 
             if payload is None:
@@ -121,7 +119,7 @@ class ServerReceiver(ServerBase):
                 original = self.input_queue.pop(timeout=0.1)
 
             if original is None:
-                # still running but no original frame found → skip
+                # still running but no original frame found -> skip
                 continue
 
             # ---- Store matched result ----
@@ -131,7 +129,7 @@ class ServerReceiver(ServerBase):
 
 
     # -----------------------------------------------
-    # External interface: retrieve matched predictions
+    # function for retrieving the prediction
     # -----------------------------------------------
     def receiveDataFromPrediction(self, frame_id=None):
         """

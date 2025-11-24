@@ -10,17 +10,10 @@ import struct
 
 class ServerSender(ServerBase):
     """
-    Robust TCP async sender with automatic reconnect.
-
-    Modes:
-    1) Filesystem mode: stream files at fixed fps
-    2) Async queue mode: send frames pushed by external modules
-
-    Features:
-    - Non-blocking on startup (does NOT wait for client)
-    - Auto-reconnect if client disconnects
-    - Keeps running even without client
-    - Sender never dies on socket errors
+    TCP sender (TX). It continuously sends data to the client, running the AI models
+    - receives data dicts from input_queue, through sendDataForPrediction()
+    - Sends (metadata, payload)
+    - puts sent data into sent_queue for matching (used from the serverreceiver)
     """
 
     def __init__(self, port, input_queue: BlockingQueue, sent_queue: BlockingQueue):
@@ -34,7 +27,7 @@ class ServerSender(ServerBase):
         self.default_polling_frequency = 50.0  # Hz queue polling
 
     # -------------------------------------------------------
-    # PUBLIC API → enqueue frame (not sent immediately)
+    # Push data into the internal buffer queue (called from PredictionServerConnector)
     # -------------------------------------------------------
     def sendDataForPrediction(self, data: dict):
         #receives a dict containing "img" and "metadata"
@@ -48,7 +41,7 @@ class ServerSender(ServerBase):
         self.input_queue.push(data)
 
     # -------------------------------------------------------
-    # INTERNAL → send one frame
+    # INTERNAL :send one frame to the client
     # -------------------------------------------------------
     def _send_data(self, data: dict):
         if not self.running:
@@ -104,7 +97,7 @@ class ServerSender(ServerBase):
 
     
         # -------------------------------------------------------
-        # PURE ASYNC STREAMING
+        # ASYNC STREAMING, run continously
         # -------------------------------------------------------
         while self.running:
 
@@ -114,17 +107,18 @@ class ServerSender(ServerBase):
                 time.sleep(0.05)
                 continue
 
-            # Consume queue
+            # Consume item from the input queue, if data is avalable from the carla simulator
             item = self.input_queue.pop(timeout=0.1)
             if item is None:
                 continue
-
+            
+            #send data to the client
             self._send_data(item)
 
-            # Small throttling for CPU
+            # wait a little bit for CPU
             if self.default_polling_frequency > 0:
                 time.sleep(1.0 / self.default_polling_frequency)
 
-        # End of while
+
         if self.sent_queue is not None:
             self.sent_queue.stop()

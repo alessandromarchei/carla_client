@@ -12,12 +12,13 @@ import cmapy
 import struct
 from Service.Enumerations import DataType, ImageModality
 
+#TODO: test as well the DEPTH pipeline (for now only the SEGMENTATION model is tested)
 
 """
 This PU block takes as input the raw images from CARLA engine (carla processor service) and:
     - 1) converts into good format if needed
     - 2) prepares metatada to send to the TX 
-    - 3) sends to the prediction unit via TCP sender
+    - 3) sends to the embedded side (for AI inference) via TCP sender
     - 4) receives the prediction results from the RX TCP receiver
     - 5) applies postprocessing (visualization) to the output, based on the model type received
 """
@@ -26,10 +27,11 @@ DEFAULT_TX_PORT = 8080
 DEFAULT_RX_PORT = 8081
 
 
-#sender metadata (all 32 bits unsigned int)
+#sender metadata (all 32 bits unsigned int, littl endian, for being compatible with embedded side)
+
 HEADER_FMT_TX = "<IIIIIII"   # frame_id, height, width, channels, dtype, total_bytes, mode
 HEADER_FMT_RX = "<IIIIIII"  # frame_id, height, width, channels, dtype, total_bytes, mode
-
+#mode = output modality (segmentation, depth, etc)
 
 class PredictionUnitConnector(object):
 
@@ -159,7 +161,7 @@ class PredictionUnitConnector(object):
         return True
 
 # ----------------------------------------------------------
-    # ASYNCHRONOUS RECEIVER LOOP (ADDED)
+    # ASYNCHRONOUS RECEIVER LOOP 
     # ----------------------------------------------------------
     def _receiver_loop(self):
         """
@@ -186,18 +188,23 @@ class PredictionUnitConnector(object):
             frame_id = struct.unpack("<I", input_data["metadata"][:4])[0]
             input_image = input_data["img"]
             
-            #prepare the postprocessed output based on mode
+            #prepare the postprocessed output based on mode, for sending back to the GUI
             if mode == ImageModality.SEGMENTATION:
                 print(f"[PU Connector] Processing segmentation output for frame {frame_id}")
                 output_image = self.add_mask_segmentation(input_image, output_prediction, alpha=1.0)
+                
+                #stack input and output vertically for visualization
+                output_image = np.vstack([input_image, output_image])
+
             elif mode == ImageModality.DEPTH:
                 print(f"[PU Connector] Processing depth output for frame {frame_id}")
                 output_image = self.visualize_scene3d(input_image, output_prediction, alpha=0.7)
+            
             else:
                 print(f"[PU Connector] WARNING: Unknown ImageModality {mode}, passing raw prediction")
                 output_image = output_prediction
 
-            output_image = np.vstack([input_image, output_image])
+            
 
             # Safety: ensure CarlaProcessor exists
             if self.carlaServiceConnector is None:
