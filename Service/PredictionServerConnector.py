@@ -194,7 +194,7 @@ class PredictionUnitConnector(object):
                 output_image = self.add_mask_segmentation(input_image, output_prediction, alpha=1.0)
                 
                 #stack input and output vertically for visualization
-                output_image = np.vstack([input_image, output_image])
+                # output_image = np.vstack([input_image, output_image])
 
             elif mode == ImageModality.DEPTH:
                 print(f"[PU Connector] Processing depth output for frame {frame_id}")
