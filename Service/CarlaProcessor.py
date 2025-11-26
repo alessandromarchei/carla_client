@@ -724,7 +724,7 @@ class CarlaProcessorService(object):
 
         index = self.getSpawnedSensorIndex(uuid)
 
-        print("RECEIVED FRAME FOR SENSOR: {}".format(uuid))
+        #print("RECEIVED FRAME FOR SENSOR: {}".format(uuid))
 
         if index != -1:
             self.activeSensors[index].frames_queue.put((data, uuid))
@@ -1193,20 +1193,20 @@ class CarlaProcessorService(object):
     # --- host: prediction device address (Dns name)
     # --- port: prediction device port
     # --- Enter after the ConnectTPU button is pressed
-    def ConnectTPU(self, host, port):
+    def ConnectTPU(self, tx_port, rx_port):
 
-        print("Connecting to TPU: {}:{}".format(host, port))
+        print("Starting TPU connection...")
         self.tpu_Connector = PredictionUnitConnector(self)
 
         if self.onPredictionUnitConnectionAttemptCompleted is not None:
-            if self.tpu_Connector.connect() == True:
-                print("Connected to TPU: {}:{}".format(host, port))
+            if self.tpu_Connector.connect(tx_port, rx_port) == True:
+                #print("Connected to TPU: {}:{}".format(host, port))
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = self.tpu_Connector
                 self.onPredictionUnitConnectionAttemptCompleted(True)
                 print("TPU connection attempt completed")
             else:
-                print("Failed to connect to TPU: {}:{}".format(host, port))
+                #print("Failed to connect to TPU: {}:{}".format(host, port))
                 self.onPredictionUnitConnectionAttemptCompleted(False)
                 for sensor in self.activeSensors:
                     sensor.predictionUnitService = None
@@ -1336,9 +1336,9 @@ class CarlaProcessorService(object):
                 
     # --- Prediction unit reply is received
     # processedImage: image processed by prediction unit
-    def PredictionUnitReplyReceived(self, output_prediction, frameID):
+    def PredictionUnitReplyReceived(self, frameID, output_prediction, mode):
         if self.onPredictionUnitReplyReceived is not None:
-            self.onPredictionUnitReplyReceived(output_prediction, frameID)
+            self.onPredictionUnitReplyReceived(frameID, output_prediction, mode)
 
     # --- Get spawn point which is closest to provided one
     # position: point to be checked

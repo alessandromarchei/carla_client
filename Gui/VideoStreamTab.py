@@ -132,6 +132,12 @@ class VideoStreamTabItem(Frame):
     # --- 
     savedProcessedImage: None
 
+    # --- store last prediction for each mode (1=segmentation, 2=depth,...)
+    lastPredictionsByMode = {}      # mode → numpy image (BGR)
+    lastTkImagesByMode = {}         # mode → ImageTk.PhotoImage reference
+    displayOrder = []               # ordered list of modes to display
+
+
     # --- Full size processed image show in OpenCV window thread
     processedImageCVThread = None
 
@@ -673,29 +679,79 @@ class VideoStreamTabItem(Frame):
         self.processedImagesFrame.grid(row=2, sticky="nwse", columnspan=self.maxColumns)
 
     # --- Prediction unit reply is received event handler
-    # raw_data: received raw data to be shown in OpenCV window
-    # image: image processed by prediction unit
-    # ratio: image width/height ratio
-    def onPredictionUnitReplyReceived(self, prediction_output, frameID = None):
+    def onPredictionUnitReplyReceived(self, frameID, output_prediction, mode):
+        """
+        Called each time the prediction unit returns a frame.
+        We store last image per mode, and display all stored modes concatenated horizontally.
+        """
 
+        # --- pass full prediction to optional OpenCV external viewer thread
         if self.processedImageCVThread is not None:
-            self.processedImageCVThread.current_frame = prediction_output
+            self.processedImageCVThread.current_frame = output_prediction
 
-        # w = self.processedImagesFrame.winfo_width()
-        # h = self.processedImagesFrame.winfo_height()
-        
+        # --- Save prediction for this mode
+        #     Always store raw BGR numpy array
+        self.lastPredictionsByMode[mode] = output_prediction.copy()
 
-        # Convert to pil image and RGB for display 
-        prediction_output_rgb = cv2.cvtColor(prediction_output, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(prediction_output_rgb)
+        # --- keep order consistent: if mode appears first time, append to display order
+        if mode not in self.displayOrder:
+            self.displayOrder.append(mode)
 
-        self.processedImage = ImageTk.PhotoImage(pil_img)
-        #(resizedImage)
+        # ----------------------------------------------------------
+        # Build concatenated image from all stored prediction modes
+        # ----------------------------------------------------------
 
-        self.labelProcessedImagesStream.configure(
-            image = self.processedImage)
+        images_rgb = []
 
-        self.savedProcessedImage = self.processedImage
+        for m in self.displayOrder:
+            img_bgr = self.lastPredictionsByMode[m]
+
+            # Convert to RGB for Tkinter
+            rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            images_rgb.append(rgb)
+
+        # No images? (Should not happen but safety)
+        if len(images_rgb) == 0:
+            return
+
+        # ----------------------------------------------------------
+        # Concatenate horizontally with spacing
+        # ----------------------------------------------------------
+
+        spacing = 12  # pixels between images
+
+        # build list with separators
+        concat_list = []
+        for i, rgb in enumerate(images_rgb):
+            concat_list.append(rgb)
+            if i != len(images_rgb) - 1:
+                sep = np.zeros((rgb.shape[0], spacing, 3), dtype=np.uint8) + 60
+                concat_list.append(sep)
+
+        final_rgb = np.concatenate(concat_list, axis=1)
+
+        # ----------------------------------------------------------
+        # Convert final image to PIL and display in Tkinter
+        # ----------------------------------------------------------
+        # Build final PIL image
+        pil_img = Image.fromarray(final_rgb)
+
+        # Resize to fit processedImagesFrame
+        pil_img = self.ResizeImage(pil_img,
+                                   self.processedImagesFrame.winfo_width(),
+                                   self.processedImagesFrame.winfo_height(),
+                                   pil_img.width / pil_img.height)
+
+        # Convert for tkinter
+        tk_img = ImageTk.PhotoImage(pil_img)
+
+        # keep reference alive
+        self.processedImage = tk_img
+        self.savedProcessedImage = tk_img
+
+        self.labelProcessedImagesStream.configure(image=tk_img)
+
+
 
     # --- Resize image to required scale
     # frame: image to be resized

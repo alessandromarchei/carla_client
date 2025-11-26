@@ -1,6 +1,6 @@
 # TCP/ServerSender.py
 
-from .ServerBase import ServerBase
+from .ServerBase import ServerBase, print_metadata_py
 from .Buffer import BlockingQueue
 import cv2
 import os
@@ -8,58 +8,42 @@ import time
 import numpy as np
 import struct
 
-METADATA_FMT = "!IIII"  # frame_id, height, width, channels
-METADATA_SIZE = struct.calcsize(METADATA_FMT)
-
-
 class ServerSender(ServerBase):
     """
-    Robust TCP async sender with automatic reconnect.
-
-    Modes:
-    1) Filesystem mode: stream files at fixed fps
-    2) Async queue mode: send frames pushed by external modules
-
-    Features:
-    - Non-blocking on startup (does NOT wait for client)
-    - Auto-reconnect if client disconnects
-    - Keeps running even without client
-    - Sender never dies on socket errors
+    TCP sender (TX). It continuously sends data to the client, running the AI models
+    - receives data dicts from input_queue, through sendDataForPrediction()
+    - Sends (metadata, payload)
+    - puts sent data into sent_queue for matching (used from the serverreceiver)
     """
 
-    def __init__(self, port, input_queue: BlockingQueue, sent_queue: BlockingQueue,
-                 input_folder: str | None = None, fps: float | None = 10.0):
+    def __init__(self, port, input_queue: BlockingQueue, sent_queue: BlockingQueue):
         super().__init__(port)
 
         self.input_queue = input_queue
         self.sent_queue = sent_queue
-        self.input_folder = input_folder
-        self.frameIDcounter = 0
 
         self.name = "[Sender]"
-
-        # FPS used only in filesystem mode
-        self.fps = fps if input_folder is not None else None
-
-        # Mode selection
-        self.mode = "filesystem_mode" if input_folder is not None else "async_mode"
 
         self.default_polling_frequency = 50.0  # Hz queue polling
 
     # -------------------------------------------------------
-    # PUBLIC API → enqueue frame (not sent immediately)
+    # Push data into the internal buffer queue (called from PredictionServerConnector)
     # -------------------------------------------------------
-    def sendDataForPrediction(self, img: np.ndarray, frame_id: int | None):
-        if frame_id is None:
-            self.frameIDcounter += 1
-            frame_id = self.frameIDcounter
+    def sendDataForPrediction(self, data: dict):
+        #receives a dict containing "img" and "metadata"
 
-        self.input_queue.push({"img": img, "frame_id": frame_id})
+        if "img" not in data or "metadata" not in data:
+            print(f"{self.name} ERROR: data dict must contain 'img' and 'metadata' keys.")
+            return False
+
+        print(f"{self.name} Enqueuing frame {struct.unpack('!I', data['metadata'][:4])[0]} for sending.")
+        #push new data dict into the queue
+        self.input_queue.push(data)
 
     # -------------------------------------------------------
-    # INTERNAL → send one frame
+    # INTERNAL :send one frame to the client
     # -------------------------------------------------------
-    def _send_frame(self, img: np.ndarray, frame_id: int):
+    def _send_data(self, data: dict):
         if not self.running:
             print(f"{self.name} ERROR: Server not running.")
             return False
@@ -68,21 +52,25 @@ class ServerSender(ServerBase):
             print(f"{self.name} WARNING: No client connected — dropping frame.")
             return False
 
-        if img is None:
+        if data is None or "img" not in data or "metadata" not in data:
             print(f"{self.name} ERROR: img is None.")
             return False
 
-        # Prepare image metadata
-        img = np.ascontiguousarray(cv2.resize(img, (640, 320)))
-        H_image, W_image = img.shape[:2]
-        C_image = 1 if img.ndim == 2 else img.shape[2]
-        raw = img.tobytes()
+        # extract data from dict
+        img = data["img"]
+        metadata = data["metadata"]
 
-        metadata = struct.pack(METADATA_FMT, frame_id, H_image, W_image, C_image)
+        #ensure image is stored contiguously
+        img = np.ascontiguousarray(cv2.resize(img, (640, 320)))
+        
+        #convert image to raw bytes
+        raw_image = img.tobytes()
+
+        # print_metadata_py(metadata, "SERVER SENDING METADATA (TO CLIENT)")
 
         try:
             self.client_sock.sendall(metadata)
-            self.client_sock.sendall(raw)
+            self.client_sock.sendall(raw_image)
 
         except Exception as e:
             print(f"{self.name} ERROR during send: {e}")
@@ -91,17 +79,10 @@ class ServerSender(ServerBase):
 
         # Store sent data for matching
         if self.sent_queue is not None:
-            self.sent_queue.push({
-                "frame_id": frame_id,
-                "img": img,
-                "H": H_image,
-                "W": W_image,
-                "C": C_image,
-                "timestamp": time.time(),
-            })
+            self.sent_queue.push({"metadata": metadata, "img": img})
 
-        print(f"{self.name} SENT frame {frame_id} "
-              f"({H_image}x{W_image}x{C_image}, {len(raw)} bytes)")
+        print(f"{self.name} SENT frame {metadata[0]} "
+              f"({metadata[1]}x{metadata[2]}x{metadata[3]}, {len(raw_image)} bytes)")
         return True
 
     # -------------------------------------------------------
@@ -114,55 +95,9 @@ class ServerSender(ServerBase):
             print(f"{self.name} Failed to start")
             return
 
-        print(f"{self.name} Started async sender (mode={self.mode}, fps={self.fps})")
-
-        # Calculate FPS interval (filesystem mode only)
-        frame_interval = 1.0 / self.fps if (self.fps and self.fps > 0) else None
-
+    
         # -------------------------------------------------------
-        # MODE 1 : FILESYSTEM STREAMING
-        # -------------------------------------------------------
-        if self.mode == "filesystem_mode":
-
-            folder = os.path.expanduser(self.input_folder)
-            imgs = sorted(os.listdir(folder))
-            idx = 0
-
-            while self.running:
-
-                # Try to accept client if missing
-                if self.client_sock is None:
-                    self.acceptClient()
-                    time.sleep(0.05)
-                    continue
-
-                if idx >= len(imgs):
-                    break
-
-                # Load next frame
-                path = os.path.join(folder, imgs[idx])
-                img = cv2.imread(path)
-                if img is None:
-                    idx += 1
-                    continue
-
-                self.frameIDcounter += 1
-                ok = self._send_frame(img, self.frameIDcounter)
-
-                # If sending failed, retry after reconnection
-                if ok:
-                    idx += 1
-                    if frame_interval:
-                        time.sleep(frame_interval)
-                else:
-                    time.sleep(0.05)
-
-            if self.sent_queue is not None:
-                self.sent_queue.stop()
-            return
-
-        # -------------------------------------------------------
-        # MODE 2 : PURE ASYNC STREAMING
+        # ASYNC STREAMING, run continously
         # -------------------------------------------------------
         while self.running:
 
@@ -172,20 +107,18 @@ class ServerSender(ServerBase):
                 time.sleep(0.05)
                 continue
 
-            # Consume queue
+            # Consume item from the input queue, if data is avalable from the carla simulator
             item = self.input_queue.pop(timeout=0.1)
             if item is None:
                 continue
+            
+            #send data to the client
+            self._send_data(item)
 
-            img = item["img"]
-            frame_id = item["frame_id"]
-
-            self._send_frame(img, frame_id)
-
-            # Small throttling for CPU
+            # wait a little bit for CPU
             if self.default_polling_frequency > 0:
                 time.sleep(1.0 / self.default_polling_frequency)
 
-        # End of while
+
         if self.sent_queue is not None:
             self.sent_queue.stop()

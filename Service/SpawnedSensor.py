@@ -178,8 +178,7 @@ class SpawnedSensorItem(object):
                 if self.carlaProcessorService.tpu_Connector is not None:
                     print("Sending frame from front sensor to TPU...")
                     self.carlaProcessorService.tpu_Connector.sendDataForPrediction(
-                        np.ascontiguousarray(shown_image), 
-                        self.params.imgWidth, self.params.imgHeight)
+                        np.ascontiguousarray(shown_image))
 
         except Exception as e:
             error = "Process new video frame error: ".format(str(e))

@@ -1,5 +1,7 @@
 import queue
 
+
+#queue used for multiple threads communication (used by serversender and serverreceiver)
 class BlockingQueue:
     def __init__(self):
         self.q = queue.Queue()
